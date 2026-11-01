@@ -7,37 +7,37 @@
 <VBox prefHeight="740.0" prefWidth="1160.0" spacing="0.0" xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.fiwpr06.ftpapplication.server.controller.FtpServerController">
     <!-- Header HUD Bar -->
     <HBox alignment="CENTER_LEFT" spacing="14.0" styleClass="hud-bar">
-        <Label styleClass="hud-title" text="FTP APPLICATION SERVER" minWidth="USE_PREF_SIZE" />
+        <Label styleClass="hud-title" text="FTP APPLICATION SERVER" />
         <Region HBox.hgrow="ALWAYS" />
-        <Label text="Cổng:" styleClass="hud-label" minWidth="USE_PREF_SIZE" />
+        <Label text="Cổng:" styleClass="hud-label" />
         <TextField fx:id="txtPort" prefWidth="75.0" minWidth="65.0" text="2121" />
-        <Button fx:id="btnStart" onAction="#handleStartServer" styleClass="btn-primary" text="▶ Bật Server" minWidth="USE_PREF_SIZE" />
-        <Button fx:id="btnStop" disable="true" onAction="#handleStopServer" styleClass="btn-danger" text="■ Dừng Server" minWidth="USE_PREF_SIZE" />
-        <Label fx:id="lblStatus" styleClass="status-badge-stopped" text="● Đang dừng" minWidth="USE_PREF_SIZE" />
+        <Button fx:id="btnStart" onAction="#handleStartServer" styleClass="btn-primary" text="▶ Bật Server" />
+        <Button fx:id="btnStop" disable="true" onAction="#handleStopServer" styleClass="btn-danger" text="■ Dừng Server" />
+        <Label fx:id="lblStatus" styleClass="status-badge-stopped" text="● Đang dừng" />
     </HBox>
 
     <!-- Prominent Connection Info & Utility Toolbar (PeerChat Style) -->
     <HBox alignment="CENTER_LEFT" spacing="12.0" styleClass="connection-info-bar">
         <!-- IP Box with Copy -->
-        <Label text="IP Máy chủ:" styleClass="hud-label" minWidth="USE_PREF_SIZE" />
-        <Label fx:id="lblServerIp" text="127.0.0.1" styleClass="code-badge" minWidth="USE_PREF_SIZE" />
-        <Button onAction="#handleCopyIp" styleClass="btn-utility" text="Sao chép IP" minWidth="USE_PREF_SIZE" />
+        <Label text="IP Máy chủ:" styleClass="hud-label" />
+        <Label fx:id="lblServerIp" text="127.0.0.1" styleClass="code-badge" />
+        <Button onAction="#handleCopyIp" styleClass="btn-utility" text="Sao chép IP" />
 
         <Separator orientation="VERTICAL" />
 
         <!-- Passcode Box with Copy -->
-        <Label text="Mã kết nối:" styleClass="hud-label" minWidth="USE_PREF_SIZE" />
+        <Label text="Mã kết nối:" styleClass="hud-label" />
         <TextField fx:id="txtPasscode" prefWidth="100.0" minWidth="90.0" text="FTP888" styleClass="passcode-field" promptText="Passcode" />
-        <Button onAction="#handleCopyPasscode" styleClass="btn-utility" text="Sao chép mã" minWidth="USE_PREF_SIZE" />
+        <Button onAction="#handleCopyPasscode" styleClass="btn-utility" text="Sao chép mã" />
 
         <!-- Temporary Feedback Toast -->
-        <Label fx:id="lblCopyFeedback" text="" styleClass="feedback-toast" minWidth="USE_PREF_SIZE" />
+        <Label fx:id="lblCopyFeedback" text="" styleClass="feedback-toast" />
 
         <Region HBox.hgrow="ALWAYS" />
 
         <!-- Utility Buttons -->
-        <Button onAction="#handleOpenStorageFolder" styleClass="btn-secondary" text="Mở thư mục gốc" minWidth="USE_PREF_SIZE" />
-        <Button onAction="#clearConsole" styleClass="btn-secondary" text="Xóa nhật ký" minWidth="USE_PREF_SIZE" />
+        <Button onAction="#handleOpenStorageFolder" styleClass="btn-secondary" text="Mở thư mục gốc" />
+        <Button onAction="#clearConsole" styleClass="btn-secondary" text="Xóa nhật ký" />
     </HBox>
 
     <!-- Main Content Tabs -->
@@ -49,11 +49,11 @@
                     <Insets bottom="14.0" left="16.0" right="16.0" top="14.0" />
                 </padding>
                 <HBox alignment="CENTER_LEFT" spacing="10.0">
-                    <Label text="Danh sách phiên kết nối thời gian thực:" style="-fx-font-weight: bold; -fx-text-fill: #1E3A8A;" minWidth="USE_PREF_SIZE" />
-                    <Label fx:id="lblClientCount" text="0 máy khách trực tuyến" style="-fx-text-fill: #059669; -fx-font-weight: bold;" minWidth="USE_PREF_SIZE" />
+                    <Label text="Danh sách phiên kết nối thời gian thực:" style="-fx-font-weight: bold; -fx-text-fill: #1E3A8A;" />
+                    <Label fx:id="lblClientCount" text="0 máy khách trực tuyến" style="-fx-text-fill: #059669; -fx-font-weight: bold;" />
                     <Region HBox.hgrow="ALWAYS" />
-                    <Button onAction="#refreshActiveSessions" styleClass="btn-secondary" text="Làm mới" minWidth="USE_PREF_SIZE" />
-                    <Button onAction="#disconnectSelectedClient" styleClass="btn-danger" text="Ngắt kết nối" minWidth="USE_PREF_SIZE" />
+                    <Button onAction="#refreshActiveSessions" styleClass="btn-secondary" text="Làm mới" />
+                    <Button onAction="#disconnectSelectedClient" styleClass="btn-danger" text="Ngắt kết nối" />
                 </HBox>
                 <TableView fx:id="tblSessions" VBox.vgrow="ALWAYS">
                     <columns>
@@ -78,9 +78,9 @@
                     <Insets bottom="14.0" left="16.0" right="16.0" top="14.0" />
                 </padding>
                 <HBox alignment="CENTER_LEFT" spacing="10.0">
-                    <Label text="Lịch sử truyền tải tệp tin:" style="-fx-font-weight: bold; -fx-text-fill: #1E3A8A;" minWidth="USE_PREF_SIZE" />
+                    <Label text="Lịch sử truyền tải tệp tin:" style="-fx-font-weight: bold; -fx-text-fill: #1E3A8A;" />
                     <Region HBox.hgrow="ALWAYS" />
-                    <Button onAction="#refreshLogs" styleClass="btn-secondary" text="Làm mới" minWidth="USE_PREF_SIZE" />
+                    <Button onAction="#refreshLogs" styleClass="btn-secondary" text="Làm mới" />
                 </HBox>
                 <TableView fx:id="tblLogs" VBox.vgrow="ALWAYS">
                     <columns>
@@ -106,9 +106,9 @@
                     <Insets bottom="14.0" left="16.0" right="16.0" top="14.0" />
                 </padding>
                 <HBox alignment="CENTER_LEFT" spacing="10.0">
-                    <Label text="Luồng dữ liệu trao đổi lệnh và phản hồi:" style="-fx-font-weight: bold; -fx-text-fill: #1E3A8A;" minWidth="USE_PREF_SIZE" />
+                    <Label text="Luồng dữ liệu trao đổi lệnh và phản hồi:" style="-fx-font-weight: bold; -fx-text-fill: #1E3A8A;" />
                     <Region HBox.hgrow="ALWAYS" />
-                    <Button onAction="#clearConsole" styleClass="btn-secondary" text="Xóa nhật ký" minWidth="USE_PREF_SIZE" />
+                    <Button onAction="#clearConsole" styleClass="btn-secondary" text="Xóa nhật ký" />
                 </HBox>
                 <TextArea fx:id="txtConsole" editable="false" styleClass="console-area" wrapText="true" VBox.vgrow="ALWAYS" />
             </VBox>
@@ -121,10 +121,10 @@
                     <Insets bottom="14.0" left="16.0" right="16.0" top="14.0" />
                 </padding>
                 <HBox alignment="CENTER_LEFT" spacing="10.0">
-                    <Label text="Danh sách tài khoản hệ thống:" style="-fx-font-weight: bold; -fx-text-fill: #1E3A8A;" minWidth="USE_PREF_SIZE" />
+                    <Label text="Danh sách tài khoản hệ thống:" style="-fx-font-weight: bold; -fx-text-fill: #1E3A8A;" />
                     <Region HBox.hgrow="ALWAYS" />
-                    <Button onAction="#refreshUsers" styleClass="btn-secondary" text="Làm mới" minWidth="USE_PREF_SIZE" />
-                    <Button onAction="#handleDeleteUser" styleClass="btn-danger" text="Xóa người dùng" minWidth="USE_PREF_SIZE" />
+                    <Button onAction="#refreshUsers" styleClass="btn-secondary" text="Làm mới" />
+                    <Button onAction="#handleDeleteUser" styleClass="btn-danger" text="Xóa người dùng" />
                 </HBox>
                 <TableView fx:id="tblUsers" VBox.vgrow="ALWAYS">
                     <columns>
@@ -147,9 +147,9 @@
                         <TextField fx:id="txtNewUser" promptText="Tên người dùng" prefWidth="140.0" />
                         <TextField fx:id="txtNewPass" promptText="Mật khẩu" prefWidth="140.0" />
                         <TextField fx:id="txtNewHome" promptText="Thư mục lưu trữ" text="server_storage/files" HBox.hgrow="ALWAYS" />
-                        <CheckBox fx:id="chkRead" selected="true" text="Đọc" minWidth="USE_PREF_SIZE" />
-                        <CheckBox fx:id="chkWrite" selected="true" text="Ghi" minWidth="USE_PREF_SIZE" />
-                        <Button onAction="#handleAddUser" styleClass="btn-primary" text="Lưu tài khoản" minWidth="USE_PREF_SIZE" />
+                        <CheckBox fx:id="chkRead" selected="true" text="Đọc" />
+                        <CheckBox fx:id="chkWrite" selected="true" text="Ghi" />
+                        <Button onAction="#handleAddUser" styleClass="btn-primary" text="Lưu tài khoản" />
                     </HBox>
                 </TitledPane>
             </VBox>

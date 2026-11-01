@@ -45,7 +45,7 @@
                     <HBox alignment="CENTER_LEFT" spacing="8">
                         <Label text="Địa chỉ máy chủ:" styleClass="field-label"/>
                         <Region HBox.hgrow="ALWAYS"/>
-                        <Button text="127.0.0.1" onAction="#handleFillLocalHost" styleClass="btn-pill" minWidth="USE_PREF_SIZE"/>
+                        <Button text="127.0.0.1" onAction="#handleFillLocalHost" styleClass="btn-pill" />
                     </HBox>
                     <TextField fx:id="hostField" promptText="127.0.0.1 hoặc IP mạng LAN" text="127.0.0.1" styleClass="text-input-field"/>
                 </VBox>
@@ -61,8 +61,8 @@
                     <HBox alignment="CENTER_LEFT" spacing="8">
                         <Label text="Mã kết nối máy chủ:" styleClass="field-label"/>
                         <Region HBox.hgrow="ALWAYS"/>
-                        <Button text="Mặc định: FTP888" onAction="#handleFillDefaultCode" styleClass="btn-pill" minWidth="USE_PREF_SIZE"/>
-                        <Button text="Dán mã" onAction="#handlePasteCode" styleClass="btn-pill" minWidth="USE_PREF_SIZE"/>
+                        <Button text="Mặc định: FTP888" onAction="#handleFillDefaultCode" styleClass="btn-pill" />
+                        <Button text="Dán mã" onAction="#handlePasteCode" styleClass="btn-pill" />
                     </HBox>
                     <TextField fx:id="codeField" promptText="Mã kết nối do máy chủ cung cấp" text="FTP888" styleClass="text-input-field"/>
                 </VBox>
@@ -82,7 +82,7 @@
                         <Insets top="8"/>
                     </padding>
                     <Button fx:id="connectButton" text="KẾT NỐI MÁY CHỦ" onAction="#handleConnect"
-                            styleClass="btn-primary" defaultButton="true" prefWidth="220.0" minWidth="USE_PREF_SIZE"/>
+                            styleClass="btn-primary" defaultButton="true" prefWidth="220.0" />
                 </HBox>
             </VBox>
         </VBox>

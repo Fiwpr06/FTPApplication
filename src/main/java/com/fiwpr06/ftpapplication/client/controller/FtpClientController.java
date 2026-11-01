@@ -237,7 +237,7 @@ public class FtpClientController implements FtpClient.ClientEventListener {
             javafx.scene.Parent root = loader.load();
             javafx.stage.Stage stage = (Stage) btnDisconnect.getScene().getWindow();
             stage.getScene().setRoot(root);
-            stage.setTitle("⚡ FTP Application - File Transfer System");
+            stage.setTitle("FTP Application - Kết nối máy chủ");
             stage.setWidth(720);
             stage.setHeight(550);
             stage.centerOnScreen();
@@ -289,10 +289,10 @@ public class FtpClientController implements FtpClient.ClientEventListener {
 
     @FXML
     public void handleLocalNewFolder() {
-        TextInputDialog dialog = new TextInputDialog("New Folder");
-        dialog.setTitle("New Local Folder");
+        TextInputDialog dialog = new TextInputDialog("ThuMucMoi");
+        dialog.setTitle("Tạo thư mục cục bộ mới");
         dialog.setHeaderText(null);
-        dialog.setContentText("Enter folder name:");
+        dialog.setContentText("Nhập tên thư mục mới:");
         Optional<String> result = dialog.showAndWait();
         result.ifPresent(name -> {
             if (!name.trim().isEmpty()) {
@@ -365,10 +365,10 @@ public class FtpClientController implements FtpClient.ClientEventListener {
     @FXML
     public void handleRemoteNewFolder() {
         if (!client.isConnected()) return;
-        TextInputDialog dialog = new TextInputDialog("New Folder");
-        dialog.setTitle("New Remote Directory");
+        TextInputDialog dialog = new TextInputDialog("ThuMucMoi");
+        dialog.setTitle("Tạo thư mục máy chủ mới");
         dialog.setHeaderText(null);
-        dialog.setContentText("Enter remote directory name:");
+        dialog.setContentText("Nhập tên thư mục mới trên máy chủ:");
         Optional<String> result = dialog.showAndWait();
         result.ifPresent(name -> {
             if (!name.trim().isEmpty()) {
