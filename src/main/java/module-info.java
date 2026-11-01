@@ -8,5 +8,7 @@ module com.fiwpr06.ftpapplication {
 
     exports com.fiwpr06.ftpapplication.common.model;
     exports com.fiwpr06.ftpapplication.common.util;
+    exports com.fiwpr06.ftpapplication.server.core;
+    exports com.fiwpr06.ftpapplication.server.command;
     exports com.fiwpr06.ftpapplication.server.database;
 }
