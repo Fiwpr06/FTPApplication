@@ -72,6 +72,18 @@ public class FtpDatabaseManager {
                         ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;";
                 stmt.executeUpdate(createLogsTable);
 
+                // Bang active_sessions (Luu tru phien ket noi PeerChat style)
+                String createSessionsTable = "CREATE TABLE IF NOT EXISTS `active_sessions` (" +
+                        "  `id` INT AUTO_INCREMENT PRIMARY KEY," +
+                        "  `session_id` VARCHAR(50) NOT NULL UNIQUE," +
+                        "  `display_name` VARCHAR(100) NOT NULL," +
+                        "  `client_ip` VARCHAR(45) NOT NULL," +
+                        "  `passcode_used` VARCHAR(50) NOT NULL," +
+                        "  `connected_at` DATETIME NOT NULL," +
+                        "  `last_active` DATETIME NOT NULL" +
+                        ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;";
+                stmt.executeUpdate(createSessionsTable);
+
                 // 4. Chen tai khoan mac dinh neu chua co
                 String seedUsers = "INSERT IGNORE INTO `users` (`id`, `username`, `password`, `home_dir`, `permission_read`, `permission_write`, `is_active`) VALUES " +
                         "(1, 'admin', 'admin', 'server_storage/files', 1, 1, 1), " +

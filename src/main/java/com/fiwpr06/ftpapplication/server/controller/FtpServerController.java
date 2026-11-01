@@ -22,6 +22,7 @@ public class FtpServerController implements FtpServer.ServerEventListener {
 
     @FXML private Label lblServerIp;
     @FXML private TextField txtPort;
+    @FXML private TextField txtPasscode;
     @FXML private Button btnStart;
     @FXML private Button btnStop;
     @FXML private Label lblStatus;
@@ -80,6 +81,15 @@ public class FtpServerController implements FtpServer.ServerEventListener {
         this.server = new FtpServer();
         this.server.addListener(this);
 
+        if (txtPasscode != null) {
+            txtPasscode.setText(server.getConnectionPasscode());
+            txtPasscode.textProperty().addListener((obs, oldVal, newVal) -> {
+                if (newVal != null && !newVal.trim().isEmpty()) {
+                    server.setConnectionPasscode(newVal.trim());
+                }
+            });
+        }
+
         lblServerIp.setText(NetworkUtil.getLocalIpAddress());
 
         setupTables();
@@ -118,6 +128,10 @@ public class FtpServerController implements FtpServer.ServerEventListener {
     }
 
     private void initDatabaseAndLoad() {
+        if (txtPasscode != null && !txtPasscode.getText().trim().isEmpty()) {
+            server.setConnectionPasscode(txtPasscode.getText().trim());
+        }
+
         new Thread(() -> {
             boolean ok = FtpDatabaseManager.initialize();
             Platform.runLater(() -> {
@@ -141,6 +155,10 @@ public class FtpServerController implements FtpServer.ServerEventListener {
         } catch (NumberFormatException e) {
             AlertHelper.showWarning("Input Error", "Cong Port phai la so nguyen hop le!");
             return;
+        }
+
+        if (txtPasscode != null && !txtPasscode.getText().trim().isEmpty()) {
+            server.setConnectionPasscode(txtPasscode.getText().trim());
         }
 
         new Thread(() -> {

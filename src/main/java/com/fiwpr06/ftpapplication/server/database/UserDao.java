@@ -103,6 +103,52 @@ public class UserDao {
         }
     }
 
+    public synchronized User getOrCreatePasscodeUser(String displayName) {
+        User user = getByUsername(displayName);
+        if (user == null) {
+            user = new User(0, displayName, "", "server_storage/files", true, true, true);
+            addUser(user);
+            user = getByUsername(displayName);
+        }
+        return user;
+    }
+
+    public void recordSession(String sessionId, String displayName, String clientIp, String passcode) {
+        String sql = "INSERT INTO active_sessions (session_id, display_name, client_ip, passcode_used, connected_at, last_active) " +
+                "VALUES (?, ?, ?, ?, NOW(), NOW()) ON DUPLICATE KEY UPDATE last_active = NOW()";
+        try (Connection conn = FtpDatabaseManager.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, sessionId);
+            ps.setString(2, displayName);
+            ps.setString(3, clientIp);
+            ps.setString(4, passcode);
+            ps.executeUpdate();
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public void removeSession(String sessionId) {
+        String sql = "DELETE FROM active_sessions WHERE session_id = ?";
+        try (Connection conn = FtpDatabaseManager.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, sessionId);
+            ps.executeUpdate();
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public void clearAllSessions() {
+        String sql = "DELETE FROM active_sessions";
+        try (Connection conn = FtpDatabaseManager.getConnection();
+             Statement stmt = conn.createStatement()) {
+            stmt.executeUpdate(sql);
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+
     private User mapRow(ResultSet rs) throws SQLException {
         return new User(
                 rs.getInt("id"),

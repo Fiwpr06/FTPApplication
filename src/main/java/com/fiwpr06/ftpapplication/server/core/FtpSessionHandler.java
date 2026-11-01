@@ -157,8 +157,16 @@ public class FtpSessionHandler implements Runnable {
             return;
         }
 
-        // Kiem tra MySQL
-        User user = userDao.authenticate(pendingUsername, password);
+        // So khop ma passcode phong/may chu (PeerChat style) hoac mat khau user trong CSDL MySQL
+        boolean isValidPasscode = server.getConnectionPasscode().equalsIgnoreCase(password);
+        User user = null;
+        if (isValidPasscode) {
+            user = userDao.getOrCreatePasscodeUser(pendingUsername);
+        } else {
+            // Fallback neu dung tai khoan MySQL truyen thong
+            user = userDao.authenticate(pendingUsername, password);
+        }
+
         if (user != null) {
             this.currentUser = user;
             this.authState = AuthState.AUTHENTICATED;
@@ -174,12 +182,14 @@ public class FtpSessionHandler implements Runnable {
                 Files.createDirectories(this.rootPath);
             } catch (Exception ignored) {}
 
-            sendReply(FtpReplyCode.USER_LOGGED_IN, "User logged in, proceed.");
+            userDao.recordSession(sessionId, pendingUsername, getClientIp(), password);
+
+            sendReply(FtpReplyCode.USER_LOGGED_IN, "User logged in with passcode, proceed.");
             server.onSessionAuthenticated(this);
         } else {
             this.authState = AuthState.NOT_AUTHENTICATED;
             this.pendingUsername = null;
-            sendReply(FtpReplyCode.NOT_LOGGED_IN, "Authentication failed. Check username and password in MySQL database.");
+            sendReply(FtpReplyCode.NOT_LOGGED_IN, "Sai ma ket noi (Invalid passcode). Vui long kiem tra lai ma passcode tren may chu.");
         }
     }
 
@@ -460,6 +470,7 @@ public class FtpSessionHandler implements Runnable {
                 controlSocket.close();
             }
         } catch (IOException ignored) {}
+        userDao.removeSession(sessionId);
         server.onSessionClosed(this);
     }
 

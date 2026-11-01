@@ -29,6 +29,7 @@ public class FtpServer {
     }
 
     private int port = 2121;
+    private String connectionPasscode = "FTP888";
     private ServerSocket serverSocket;
     private volatile boolean running = false;
     private ExecutorService threadPool;
@@ -40,6 +41,16 @@ public class FtpServer {
 
     public FtpServer(int port) {
         this.port = port;
+    }
+
+    public String getConnectionPasscode() {
+        return connectionPasscode;
+    }
+
+    public void setConnectionPasscode(String passcode) {
+        if (passcode != null && !passcode.trim().isEmpty()) {
+            this.connectionPasscode = passcode.trim();
+        }
     }
 
     public void addListener(ServerEventListener listener) {
@@ -59,6 +70,8 @@ public class FtpServer {
             LOGGER.severe("[FTP_SERVER] Khong the khoi tao MySQL Database. Server se khong khoi chay.");
             return false;
         }
+
+        new com.fiwpr06.ftpapplication.server.database.UserDao().clearAllSessions();
 
         try {
             serverSocket = new ServerSocket(this.port);
