@@ -146,6 +146,23 @@
     -fx-border-color: #94A3B8;
 }
 
+.btn-pill {
+    -fx-background-color: #F1F5F9;
+    -fx-text-fill: #2563EB;
+    -fx-font-size: 11px;
+    -fx-font-weight: bold;
+    -fx-border-color: #CBD5E1;
+    -fx-border-radius: 12px;
+    -fx-background-radius: 12px;
+    -fx-padding: 3px 10px;
+    -fx-cursor: hand;
+}
+.btn-pill:hover {
+    -fx-background-color: #DBEAFE;
+    -fx-text-fill: #1D4ED8;
+    -fx-border-color: #93C5FD;
+}
+
 /* ================= INPUTS ================= */
 
 .text-field, .password-field, .text-input-field {

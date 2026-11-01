@@ -18,10 +18,10 @@ public class ClientApp extends Application {
         Scene scene = new Scene(root);
         scene.getStylesheets().add(getClass().getResource("/com/fiwpr06/ftpapplication/css/client.css").toExternalForm());
 
-        stage.setTitle("⚡ FTP Application - File Transfer System");
+        stage.setTitle("FTP Application - Kết nối máy chủ");
         stage.setScene(scene);
-        stage.setMinWidth(720);
-        stage.setMinHeight(550);
+        stage.setMinWidth(760);
+        stage.setMinHeight(590);
         stage.show();
     }
 

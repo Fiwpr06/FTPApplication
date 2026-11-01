@@ -35,23 +35,59 @@
     -fx-font-weight: bold;
 }
 
-.hud-ip-value {
+.hud-ip-value,
+.code-badge {
+    -fx-font-family: 'Consolas', 'Courier New', monospace;
     -fx-text-fill: #0284C7;
     -fx-font-size: 13px;
     -fx-font-weight: bold;
     -fx-background-color: #E0F2FE;
-    -fx-padding: 4px 10px;
+    -fx-border-color: #BAE6FD;
+    -fx-border-radius: 6px;
+    -fx-padding: 5px 12px;
     -fx-background-radius: 6px;
 }
 
+.connection-info-bar {
+    -fx-background-color: #FFFFFF;
+    -fx-border-color: #E2E8F0;
+    -fx-border-width: 0 0 1px 0;
+    -fx-padding: 10px 20px;
+    -fx-alignment: center-left;
+}
+
+.passcode-field,
 .hud-passcode-field {
+    -fx-font-family: 'Consolas', 'Courier New', monospace;
     -fx-background-color: #FEF3C7;
     -fx-text-fill: #B45309;
     -fx-font-weight: bold;
     -fx-border-color: #F59E0B;
     -fx-border-radius: 6px;
     -fx-background-radius: 6px;
-    -fx-padding: 4px 10px;
+    -fx-padding: 5px 10px;
+}
+
+.btn-utility {
+    -fx-background-color: #F1F5F9;
+    -fx-text-fill: #334155;
+    -fx-font-weight: bold;
+    -fx-border-color: #CBD5E1;
+    -fx-border-radius: 6px;
+    -fx-background-radius: 6px;
+    -fx-padding: 6px 12px;
+    -fx-cursor: hand;
+}
+.btn-utility:hover {
+    -fx-background-color: #E2E8F0;
+    -fx-text-fill: #0F172A;
+}
+
+.feedback-toast {
+    -fx-text-fill: #16A34A;
+    -fx-font-weight: bold;
+    -fx-font-size: 12px;
+    -fx-padding: 0 8px;
 }
 
 .status-badge-running {
