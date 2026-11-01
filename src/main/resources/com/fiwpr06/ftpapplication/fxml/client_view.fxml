@@ -4,93 +4,109 @@
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
 
-<VBox prefHeight="750.0" prefWidth="1100.0" spacing="0.0" xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.fiwpr06.ftpapplication.client.controller.FtpClientController">
-    <!-- Quickconnect Bar -->
-    <HBox styleClass="quickconnect-bar">
-        <Label text="Host:" style="-fx-text-fill: #94A3B8;" />
-        <TextField fx:id="txtHost" prefWidth="150.0" text="127.0.0.1" promptText="Host/IP" />
-        <Label text="Username:" style="-fx-text-fill: #94A3B8;" />
-        <TextField fx:id="txtUser" prefWidth="130.0" text="admin" promptText="Username" />
-        <Label text="Password:" style="-fx-text-fill: #94A3B8;" />
-        <PasswordField fx:id="txtPass" prefWidth="130.0" text="admin" promptText="Password" />
-        <Label text="Port:" style="-fx-text-fill: #94A3B8;" />
-        <TextField fx:id="txtPort" prefWidth="70.0" text="2121" promptText="Port" />
-        <Button fx:id="btnQuickconnect" onAction="#handleConnect" styleClass="btn-primary" text="⚡ Quickconnect" />
-        <Button fx:id="btnDisconnect" disable="true" onAction="#handleDisconnect" styleClass="btn-danger" text="Disconnect" />
+<VBox prefHeight="780.0" prefWidth="1150.0" spacing="0.0" xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.fiwpr06.ftpapplication.client.controller.FtpClientController">
+    <!-- Top Active Connection Bar -->
+    <HBox styleClass="quickconnect-bar" alignment="CENTER_LEFT" spacing="12.0">
+        <Label text="⚡ FTP APPLICATION" style="-fx-font-weight: bold; -fx-text-fill: #1E3A8A; -fx-font-size: 14px;" />
+        <Separator orientation="VERTICAL" />
+        <Label text="Host:" styleClass="field-label" />
+        <TextField fx:id="txtHost" prefWidth="130.0" text="127.0.0.1" promptText="Host/IP" styleClass="text-input-field" />
+        <Label text="Bí danh:" styleClass="field-label" />
+        <TextField fx:id="txtUser" prefWidth="120.0" text="admin" promptText="Bí danh" styleClass="text-input-field" />
+        <Label text="Passcode:" styleClass="field-label" />
+        <PasswordField fx:id="txtPass" prefWidth="110.0" text="FTP888" promptText="Passcode" styleClass="text-input-field" />
+        <Label text="Port:" styleClass="field-label" />
+        <TextField fx:id="txtPort" prefWidth="65.0" text="2121" promptText="Port" styleClass="text-input-field" />
+        <Button fx:id="btnQuickconnect" onAction="#handleConnect" styleClass="btn-primary" text="⚡ Kết nối lại" />
+        <Button fx:id="btnDisconnect" onAction="#handleDisconnect" styleClass="btn-danger" text="🚪 Ngắt kết nối" />
         <Region HBox.hgrow="ALWAYS" />
-        <Label fx:id="lblConnectionStatus" text="Disconnected" style="-fx-text-fill: #FF3B56; -fx-font-weight: bold;" />
+        <Label fx:id="lblConnectionStatus" text="Đã kết nối" style="-fx-text-fill: #059669; -fx-font-weight: bold; -fx-background-color: #DCFCE7; -fx-padding: 4px 10px; -fx-background-radius: 12px;" />
     </HBox>
 
     <!-- Console Log Stream (Collapsible / Resizable) -->
-    <TitledPane expanded="true" text="Status Log / FTP Console" prefHeight="130.0">
+    <TitledPane expanded="true" text="📋 Nhật ký Lệnh &amp; Phản hồi Máy chủ (FTP Console Stream)" prefHeight="140.0" style="-fx-font-weight: bold;">
         <TextArea fx:id="txtConsole" editable="false" styleClass="console-area" wrapText="true" />
     </TitledPane>
 
     <!-- Main Dual-Pane Explorer -->
-    <SplitPane dividerPositions="0.5" VBox.vgrow="ALWAYS">
+    <SplitPane dividerPositions="0.5" VBox.vgrow="ALWAYS" style="-fx-background-color: #F8FAFC; -fx-padding: 6px;">
         <!-- Left Pane: Local Site -->
-        <VBox spacing="6.0" styleClass="explorer-pane">
+        <VBox spacing="6.0" styleClass="card-panel">
+            <padding>
+                <Insets top="8" right="8" bottom="8" left="8" />
+            </padding>
             <HBox alignment="CENTER_LEFT" spacing="6.0" styleClass="explorer-header">
-                <Label styleClass="explorer-title" text="📁 Local Site:" />
-                <TextField fx:id="txtLocalPath" editable="false" HBox.hgrow="ALWAYS" />
-                <Button onAction="#handleLocalUp" styleClass="btn-secondary" text="⬆ Up" />
-                <Button onAction="#handleLocalRefresh" styleClass="btn-secondary" text="🔄" />
-                <Button onAction="#handleLocalNewFolder" styleClass="btn-secondary" text="➕ Dir" />
-                <Button onAction="#handleUploadSelected" styleClass="btn-action" text="Upload ➡" />
+                <Label styleClass="explorer-title" text="📁 Thư mục Máy tính (Local):" />
+                <TextField fx:id="txtLocalPath" editable="false" HBox.hgrow="ALWAYS" styleClass="text-input-field" />
+                <Button onAction="#handleLocalUp" styleClass="btn-secondary" text="⬆ Lên" />
+                <Button onAction="#handleLocalRefresh" styleClass="btn-secondary" text="🔄 Làm mới" />
+                <Button onAction="#handleLocalNewFolder" styleClass="btn-secondary" text="➕ Thư mục" />
+                <Button onAction="#handleUploadSelected" styleClass="btn-action" text="Tải lên ➡" />
             </HBox>
             <TableView fx:id="tblLocalFiles" VBox.vgrow="ALWAYS">
                 <columns>
-                    <TableColumn fx:id="colLocalName" prefWidth="240.0" text="Filename" />
-                    <TableColumn fx:id="colLocalSize" prefWidth="100.0" text="Filesize" />
-                    <TableColumn fx:id="colLocalType" prefWidth="80.0" text="Filetype" />
-                    <TableColumn fx:id="colLocalTime" prefWidth="150.0" text="Last Modified" />
+                    <TableColumn fx:id="colLocalName" minWidth="240.0" prefWidth="320.0" text="Tên tệp / Thư mục" />
+                    <TableColumn fx:id="colLocalSize" minWidth="90.0" prefWidth="110.0" text="Kích thước" />
+                    <TableColumn fx:id="colLocalType" minWidth="80.0" prefWidth="95.0" text="Loại" />
+                    <TableColumn fx:id="colLocalTime" minWidth="150.0" prefWidth="180.0" text="Ngày sửa đổi" />
                 </columns>
+                <columnResizePolicy>
+                    <TableView fx:constant="CONSTRAINED_RESIZE_POLICY" />
+                </columnResizePolicy>
             </TableView>
         </VBox>
 
         <!-- Right Pane: Remote Site -->
-        <VBox spacing="6.0" styleClass="explorer-pane">
+        <VBox spacing="6.0" styleClass="card-panel">
+            <padding>
+                <Insets top="8" right="8" bottom="8" left="8" />
+            </padding>
             <HBox alignment="CENTER_LEFT" spacing="6.0" styleClass="explorer-header">
-                <Label styleClass="explorer-title" text="🌐 Remote Site:" />
-                <TextField fx:id="txtRemotePath" editable="false" HBox.hgrow="ALWAYS" text="/" />
-                <Button onAction="#handleRemoteUp" styleClass="btn-secondary" text="⬆ Up" />
-                <Button onAction="#handleRemoteRefresh" styleClass="btn-secondary" text="🔄" />
-                <Button onAction="#handleRemoteNewFolder" styleClass="btn-secondary" text="➕ Dir" />
-                <Button onAction="#handleDownloadSelected" styleClass="btn-action" text="⬅ Download" />
-                <Button onAction="#handleRemoteDelete" styleClass="btn-danger" text="🗑 Delete" />
+                <Label styleClass="explorer-title" text="🌐 Thư mục Máy chủ (Remote):" />
+                <TextField fx:id="txtRemotePath" editable="false" HBox.hgrow="ALWAYS" text="/" styleClass="text-input-field" />
+                <Button onAction="#handleRemoteUp" styleClass="btn-secondary" text="⬆ Lên" />
+                <Button onAction="#handleRemoteRefresh" styleClass="btn-secondary" text="🔄 Làm mới" />
+                <Button onAction="#handleRemoteNewFolder" styleClass="btn-secondary" text="➕ Thư mục" />
+                <Button onAction="#handleDownloadSelected" styleClass="btn-action" text="⬅ Tải về" />
+                <Button onAction="#handleRemoteDelete" styleClass="btn-danger" text="🗑 Xóa" />
             </HBox>
             <TableView fx:id="tblRemoteFiles" VBox.vgrow="ALWAYS">
                 <columns>
-                    <TableColumn fx:id="colRemoteName" prefWidth="220.0" text="Filename" />
-                    <TableColumn fx:id="colRemoteSize" prefWidth="100.0" text="Filesize" />
-                    <TableColumn fx:id="colRemotePerm" prefWidth="100.0" text="Permissions" />
-                    <TableColumn fx:id="colRemoteTime" prefWidth="140.0" text="Date Modified" />
+                    <TableColumn fx:id="colRemoteName" minWidth="240.0" prefWidth="320.0" text="Tên tệp trên Server" />
+                    <TableColumn fx:id="colRemoteSize" minWidth="90.0" prefWidth="110.0" text="Kích thước" />
+                    <TableColumn fx:id="colRemotePerm" minWidth="100.0" prefWidth="120.0" text="Quyền hạn" />
+                    <TableColumn fx:id="colRemoteTime" minWidth="150.0" prefWidth="180.0" text="Thời gian Server" />
                 </columns>
+                <columnResizePolicy>
+                    <TableView fx:constant="CONSTRAINED_RESIZE_POLICY" />
+                </columnResizePolicy>
             </TableView>
         </VBox>
     </SplitPane>
 
     <!-- Bottom Transfer Queue Tab -->
-    <TabPane prefHeight="150.0" tabClosingPolicy="UNAVAILABLE">
-        <Tab text="Queued Transfers">
+    <TabPane prefHeight="160.0" tabClosingPolicy="UNAVAILABLE" styleClass="card-panel">
+        <Tab text="Hàng đợi Truyền tải (Transfer Queue)">
             <TableView fx:id="tblQueue">
                 <columns>
-                    <TableColumn fx:id="colQFile" prefWidth="200.0" text="File" />
-                    <TableColumn fx:id="colQType" prefWidth="90.0" text="Direction" />
-                    <TableColumn fx:id="colQSize" prefWidth="100.0" text="Size" />
-                    <TableColumn fx:id="colQProgress" prefWidth="250.0" text="Progress" />
-                    <TableColumn fx:id="colQSpeed" prefWidth="120.0" text="Speed" />
-                    <TableColumn fx:id="colQStatus" prefWidth="120.0" text="Status" />
+                    <TableColumn fx:id="colQFile" minWidth="240.0" prefWidth="350.0" text="Tệp tin truyền tải" />
+                    <TableColumn fx:id="colQType" minWidth="85.0" prefWidth="100.0" text="Chiều truyền" />
+                    <TableColumn fx:id="colQSize" minWidth="90.0" prefWidth="110.0" text="Dung lượng" />
+                    <TableColumn fx:id="colQProgress" minWidth="160.0" prefWidth="220.0" text="Tiến trình" />
+                    <TableColumn fx:id="colQSpeed" minWidth="100.0" prefWidth="130.0" text="Tốc độ" />
+                    <TableColumn fx:id="colQStatus" minWidth="110.0" prefWidth="140.0" text="Trạng thái" />
                 </columns>
+                <columnResizePolicy>
+                    <TableView fx:constant="CONSTRAINED_RESIZE_POLICY" />
+                </columnResizePolicy>
             </TableView>
         </Tab>
     </TabPane>
 
     <!-- Bottom Status Bar -->
-    <HBox styleClass="status-bar">
-        <Label fx:id="lblBottomStatus" text="Ready." style="-fx-text-fill: #94A3B8;" />
+    <HBox alignment="CENTER_LEFT" spacing="12.0" styleClass="status-bar">
+        <Label fx:id="lblBottomStatus" text="Sẵn sàng." styleClass="field-label" />
         <Region HBox.hgrow="ALWAYS" />
-        <ProgressBar fx:id="progressBarBottom" prefWidth="180.0" progress="0.0" visible="false" />
-        <Label text="Mode: PASV (Binary)" style="-fx-text-fill: #00D2E6;" />
+        <ProgressBar fx:id="progressBarBottom" prefWidth="200.0" progress="0.0" />
     </HBox>
 </VBox>
