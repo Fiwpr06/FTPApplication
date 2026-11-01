@@ -15,6 +15,7 @@ import javafx.fxml.FXML;
 import javafx.scene.control.*;
 import javafx.scene.control.cell.ProgressBarTableCell;
 import javafx.scene.control.cell.PropertyValueFactory;
+import javafx.stage.Stage;
 
 import java.io.File;
 import java.io.IOException;
@@ -195,16 +196,52 @@ public class FtpClientController implements FtpClient.ClientEventListener {
         }).start();
     }
 
+    public void initSession(FtpClient existingClient, String host, int port, String displayName, String passcode) {
+        if (this.client != null && this.client != existingClient) {
+            this.client.disconnect();
+        }
+        this.client = existingClient;
+        this.client.setListener(this);
+
+        if (txtHost != null) txtHost.setText(host);
+        if (txtPort != null) txtPort.setText(String.valueOf(port));
+        if (txtUser != null) txtUser.setText(displayName);
+        if (txtPass != null) txtPass.setText(passcode);
+
+        if (lblConnectionStatus != null) {
+            lblConnectionStatus.setText("Đã kết nối (" + displayName + ")");
+            lblConnectionStatus.setStyle("-fx-text-fill: #059669; -fx-font-weight: bold;");
+        }
+        if (btnQuickconnect != null) btnQuickconnect.setDisable(true);
+        if (btnDisconnect != null) btnDisconnect.setDisable(false);
+        if (lblBottomStatus != null) lblBottomStatus.setText("Đã đăng nhập thành công với bí danh " + displayName);
+
+        refreshRemoteDirectory();
+    }
+
     @FXML
     public void handleDisconnect() {
-        client.disconnect();
-        lblConnectionStatus.setText("Disconnected");
-        lblConnectionStatus.setStyle("-fx-text-fill: #FF3B56; -fx-font-weight: bold;");
-        btnQuickconnect.setDisable(false);
-        btnDisconnect.setDisable(true);
-        remoteFilesList.clear();
-        txtRemotePath.setText("/");
-        lblBottomStatus.setText("Disconnected from server.");
+        if (client != null) {
+            client.disconnect();
+        }
+        try {
+            javafx.fxml.FXMLLoader loader = new javafx.fxml.FXMLLoader(getClass().getResource("/com/fiwpr06/ftpapplication/fxml/connect_view.fxml"));
+            javafx.scene.Parent root = loader.load();
+            javafx.stage.Stage stage = (Stage) btnDisconnect.getScene().getWindow();
+            stage.getScene().setRoot(root);
+            stage.setTitle("⚡ FTP Application - File Transfer System");
+            stage.setWidth(720);
+            stage.setHeight(550);
+            stage.centerOnScreen();
+        } catch (Exception e) {
+            lblConnectionStatus.setText("Disconnected");
+            lblConnectionStatus.setStyle("-fx-text-fill: #DC2626; -fx-font-weight: bold;");
+            btnQuickconnect.setDisable(false);
+            btnDisconnect.setDisable(true);
+            remoteFilesList.clear();
+            txtRemotePath.setText("/");
+            lblBottomStatus.setText("Disconnected from server.");
+        }
     }
 
     // ================= DUYET THU MUC LOCAL =================

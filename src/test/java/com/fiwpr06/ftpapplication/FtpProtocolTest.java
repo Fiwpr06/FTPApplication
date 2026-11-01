@@ -87,4 +87,48 @@ public class FtpProtocolTest {
             Assertions.assertTrue(quitReply.startsWith("221"), "Phan hoi QUIT phai la 221: " + quitReply);
         }
     }
+
+    @Test
+    public void testPeerChatStylePasscodeAuth() throws Exception {
+        // Test dang nhap bang Passcode (FTP888) va Nickname (Alice)
+        try (Socket socket = new Socket("127.0.0.1", TEST_PORT);
+             BufferedReader reader = new BufferedReader(new InputStreamReader(socket.getInputStream(), StandardCharsets.UTF_8));
+             BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream(), StandardCharsets.UTF_8))) {
+
+            reader.readLine(); // 220 Welcome
+
+            // Gui USER Alice
+            writer.write("USER Alice\r\n");
+            writer.flush();
+            String userReply = reader.readLine();
+            Assertions.assertTrue(userReply.startsWith("331"));
+
+            // Gui PASS sai truoc
+            writer.write("PASS WRONG_CODE\r\n");
+            writer.flush();
+            String wrongReply = reader.readLine();
+            Assertions.assertTrue(wrongReply.startsWith("530"), "Passcode sai phai bi tu choi voi ma 530: " + wrongReply);
+        }
+
+        // Ket noi lai va gui PASS dung FTP888
+        try (Socket socket = new Socket("127.0.0.1", TEST_PORT);
+             BufferedReader reader = new BufferedReader(new InputStreamReader(socket.getInputStream(), StandardCharsets.UTF_8));
+             BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream(), StandardCharsets.UTF_8))) {
+
+            reader.readLine(); // 220 Welcome
+
+            writer.write("USER Alice\r\n");
+            writer.flush();
+            reader.readLine(); // 331
+
+            writer.write("PASS FTP888\r\n");
+            writer.flush();
+            String okReply = reader.readLine();
+            Assertions.assertTrue(okReply.startsWith("230"), "Passcode FTP888 dung phai duoc chap nhan voi ma 230: " + okReply);
+
+            writer.write("QUIT\r\n");
+            writer.flush();
+            reader.readLine();
+        }
+    }
 }
