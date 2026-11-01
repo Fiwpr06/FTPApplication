@@ -1,0 +1,25 @@
+target/
+!.mvn/wrapper/maven-wrapper.jar
+!**/src/main/**/target/
+!**/src/test/**/target/
+.kotlin
+
+### IntelliJ IDEA ###
+.idea/
+*.iws
+*.iml
+*.ipr
+
+### Logs & Temp ###
+*.log
+logs/
+
+### Runtime storage ###
+server_storage/files/*
+!server_storage/files/.gitkeep
+
+### VS Code ###
+.vscode/
+
+### Mac OS ###
+.DS_Store
