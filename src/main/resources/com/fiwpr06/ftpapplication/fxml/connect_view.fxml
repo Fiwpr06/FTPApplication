@@ -11,7 +11,7 @@
 
 <BorderPane xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
             fx:controller="com.fiwpr06.ftpapplication.client.controller.ConnectController"
-            prefWidth="720.0" prefHeight="550.0"
+            prefWidth="760.0" prefHeight="590.0"
             stylesheets="@../css/client.css">
 
     <!-- Thanh tiêu đề phía trên -->
@@ -20,8 +20,8 @@
             <padding>
                 <Insets top="12" right="20" bottom="12" left="20"/>
             </padding>
-            <Label text="⚡ FTP APPLICATION" styleClass="header-title"/>
-            <Label text="FILE TRANSFER SYSTEM" styleClass="header-subtitle"/>
+            <Label text="FTP APPLICATION" styleClass="header-title"/>
+            <Label text="HỆ THỐNG TRUYỀN TỆP TIN" styleClass="header-subtitle"/>
             <Region HBox.hgrow="ALWAYS"/>
             <Label text="GIAO THỨC:" styleClass="status-pill-label"/>
             <Label text="RFC 959 FTP" styleClass="status-pill-value"/>
@@ -31,49 +31,58 @@
     <!-- Khung nhập thông tin kết nối (Light Card) -->
     <center>
         <VBox alignment="CENTER" spacing="16">
-            <VBox styleClass="card-panel" prefWidth="500.0" maxWidth="500.0" spacing="14">
+            <VBox styleClass="card-panel" prefWidth="540.0" maxWidth="540.0" spacing="14">
                 <padding>
                     <Insets top="24" right="28" bottom="24" left="28"/>
                 </padding>
 
                 <!-- Tiêu đề form -->
                 <Label text="XÁC THỰC KẾT NỐI MÁY CHỦ FTP" styleClass="panel-title"/>
-                <Label text="Nhập địa chỉ máy chủ, mã kết nối (Passcode) và bí danh để truy cập tệp tin." styleClass="panel-desc"/>
+                <Label text="Nhập địa chỉ máy chủ, mã kết nối và bí danh để bắt đầu phiên làm việc." styleClass="panel-desc"/>
 
                 <!-- Địa chỉ IP / Host -->
                 <VBox spacing="4">
-                    <Label text="Địa chỉ IP Máy chủ (Cục bộ / Mạng LAN):" styleClass="field-label"/>
-                    <TextField fx:id="hostField" promptText="127.0.0.1 (hoặc IP mạng LAN)" text="127.0.0.1" styleClass="text-input-field"/>
+                    <HBox alignment="CENTER_LEFT" spacing="8">
+                        <Label text="Địa chỉ máy chủ:" styleClass="field-label"/>
+                        <Region HBox.hgrow="ALWAYS"/>
+                        <Button text="127.0.0.1" onAction="#handleFillLocalHost" styleClass="btn-pill" minWidth="USE_PREF_SIZE"/>
+                    </HBox>
+                    <TextField fx:id="hostField" promptText="127.0.0.1 hoặc IP mạng LAN" text="127.0.0.1" styleClass="text-input-field"/>
                 </VBox>
 
                 <!-- Cổng Port -->
                 <VBox spacing="4">
-                    <Label text="Cổng kết nối (Mặc định: 2121):" styleClass="field-label"/>
+                    <Label text="Cổng kết nối:" styleClass="field-label"/>
                     <TextField fx:id="portField" promptText="2121" text="2121" styleClass="text-input-field"/>
                 </VBox>
 
                 <!-- Mã kết nối Passcode -->
                 <VBox spacing="4">
-                    <Label text="Mã kết nối máy chủ (Passcode):" styleClass="field-label"/>
-                    <TextField fx:id="codeField" promptText="Nhập mã kết nối do máy chủ cung cấp (mặc định: FTP888)..." text="FTP888" styleClass="text-input-field"/>
+                    <HBox alignment="CENTER_LEFT" spacing="8">
+                        <Label text="Mã kết nối máy chủ:" styleClass="field-label"/>
+                        <Region HBox.hgrow="ALWAYS"/>
+                        <Button text="Mặc định: FTP888" onAction="#handleFillDefaultCode" styleClass="btn-pill" minWidth="USE_PREF_SIZE"/>
+                        <Button text="Dán mã" onAction="#handlePasteCode" styleClass="btn-pill" minWidth="USE_PREF_SIZE"/>
+                    </HBox>
+                    <TextField fx:id="codeField" promptText="Mã kết nối do máy chủ cung cấp" text="FTP888" styleClass="text-input-field"/>
                 </VBox>
 
                 <!-- Tên hiển thị -->
                 <VBox spacing="4">
-                    <Label text="Tên hiển thị / Bí danh của bạn:" styleClass="field-label"/>
-                    <TextField fx:id="nameField" promptText="Nhập bí danh (ví dụ: Alice, Bình Minh, Quang)..." styleClass="text-input-field"/>
+                    <Label text="Tên hiển thị:" styleClass="field-label"/>
+                    <TextField fx:id="nameField" promptText="Nhập bí danh của bạn (ví dụ: Alice, Minh, Quang)" styleClass="text-input-field"/>
                 </VBox>
 
                 <!-- Trạng thái kết nối -->
-                <Label fx:id="statusLabel" text="[ SẴN SÀNG ] Vui lòng nhập bí danh và kết nối." styleClass="status-label-normal" wrapText="true"/>
+                <Label fx:id="statusLabel" text="Sẵn sàng thiết lập kết nối." styleClass="status-label-normal" wrapText="true"/>
 
                 <!-- Nút kết nối -->
                 <HBox spacing="10" alignment="CENTER_RIGHT">
                     <padding>
                         <Insets top="8"/>
                     </padding>
-                    <Button fx:id="connectButton" text="KẾT NỐI MÁY CHỦ FTP" onAction="#handleConnect"
-                            styleClass="btn-primary" defaultButton="true" prefWidth="220.0"/>
+                    <Button fx:id="connectButton" text="KẾT NỐI MÁY CHỦ" onAction="#handleConnect"
+                            styleClass="btn-primary" defaultButton="true" prefWidth="220.0" minWidth="USE_PREF_SIZE"/>
                 </HBox>
             </VBox>
         </VBox>
@@ -84,7 +93,7 @@
             <padding>
                 <Insets top="8" right="16" bottom="8" left="16"/>
             </padding>
-            <Label text="FTP Application © 2026 - Chuẩn kết nối phân tán không cần đăng ký tài khoản" styleClass="footer-text"/>
+            <Label text="FTP Application © 2026 - Chuẩn kết nối phân tán" styleClass="footer-text"/>
         </HBox>
     </bottom>
 </BorderPane>

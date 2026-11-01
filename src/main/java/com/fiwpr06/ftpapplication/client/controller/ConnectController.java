@@ -9,6 +9,7 @@ import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextField;
+import javafx.scene.input.Clipboard;
 import javafx.stage.Stage;
 
 import java.io.IOException;
@@ -34,6 +35,29 @@ public class ConnectController {
     }
 
     @FXML
+    public void handleFillLocalHost() {
+        hostField.setText("127.0.0.1");
+        setStatus("Đã đặt địa chỉ máy chủ: 127.0.0.1", false);
+    }
+
+    @FXML
+    public void handleFillDefaultCode() {
+        codeField.setText("FTP888");
+        setStatus("Đã đặt mã kết nối mặc định: FTP888", false);
+    }
+
+    @FXML
+    public void handlePasteCode() {
+        String clipboardText = Clipboard.getSystemClipboard().getString();
+        if (clipboardText != null && !clipboardText.trim().isEmpty()) {
+            codeField.setText(clipboardText.trim());
+            setStatus("Đã dán mã kết nối từ bộ nhớ tạm: " + clipboardText.trim(), false);
+        } else {
+            setStatus("Bộ nhớ tạm hiện tại không có văn bản!", true);
+        }
+    }
+
+    @FXML
     private void handleConnect() {
         String host = hostField.getText().trim();
         String portStr = portField.getText().trim();
@@ -41,7 +65,7 @@ public class ConnectController {
         String name = nameField.getText().trim();
 
         if (host.isEmpty()) {
-            setStatus("[ CẢNH BÁO ] Địa chỉ máy chủ không được để trống!", true);
+            setStatus("Địa chỉ máy chủ không được để trống!", true);
             return;
         }
 
@@ -50,22 +74,22 @@ public class ConnectController {
             port = Integer.parseInt(portStr);
             if (port <= 0 || port > 65535) throw new NumberFormatException();
         } catch (NumberFormatException e) {
-            setStatus("[ CẢNH BÁO ] Cổng kết nối không hợp lệ (1 - 65535)!", true);
+            setStatus("Cổng kết nối không hợp lệ! Vui lòng nhập từ 1 đến 65535.", true);
             return;
         }
 
         if (code.isEmpty()) {
-            setStatus("[ CẢNH BÁO ] Vui lòng nhập mã kết nối Passcode!", true);
+            setStatus("Vui lòng nhập mã kết nối!", true);
             return;
         }
 
         if (name.isEmpty()) {
-            setStatus("[ CẢNH BÁO ] Vui lòng nhập bí danh / tên hiển thị!", true);
+            setStatus("Vui lòng nhập tên hiển thị!", true);
             return;
         }
 
         connectButton.setDisable(true);
-        setStatus("[ ĐANG KẾT NỐI ] Đang thiết lập kết nối tới " + host + ":" + port + "...", false);
+        setStatus("Đang kết nối tới máy chủ " + host + ":" + port + "...", false);
 
         new Thread(() -> {
             FtpClient client = new FtpClient();
@@ -74,7 +98,7 @@ public class ConnectController {
                 if (!connected) {
                     Platform.runLater(() -> {
                         connectButton.setDisable(false);
-                        setStatus("[ LỖI KẾT NỐI ] Không thể kết nối tới FTP Server tại " + host + ":" + port, true);
+                        setStatus("Không thể kết nối tới máy chủ FTP tại " + host + ":" + port, true);
                     });
                     return;
                 }
@@ -85,7 +109,7 @@ public class ConnectController {
                     client.disconnect();
                     Platform.runLater(() -> {
                         connectButton.setDisable(false);
-                        setStatus("[ XÁC THỰC THẤT BẠI ] Sai mã kết nối Passcode! Vui lòng kiểm tra lại mã trên máy chủ.", true);
+                        setStatus("Sai mã kết nối! Vui lòng kiểm tra lại mã trên máy chủ.", true);
                     });
                     return;
                 }
@@ -100,34 +124,37 @@ public class ConnectController {
                         mainController.initSession(client, host, port, name, code);
 
                         Stage stage = (Stage) connectButton.getScene().getWindow();
-                        Scene scene = connectButton.getScene();
-                        scene.setRoot(root);
+                        Scene scene = new Scene(root);
+                        scene.getStylesheets().add(getClass().getResource("/com/fiwpr06/ftpapplication/css/client.css").toExternalForm());
 
-                        stage.setTitle("⚡ FTP Application - " + name + "@" + host + ":" + port + " (FileZilla Style)");
-                        stage.setMinWidth(1000);
-                        stage.setMinHeight(640);
-                    } catch (IOException ex) {
-                        ex.printStackTrace();
+                        stage.setTitle("FTP Application - Quản lý và truyền tệp (" + name + "@" + host + ":" + port + ")");
+                        stage.setScene(scene);
+                        stage.setMinWidth(1120);
+                        stage.setMinHeight(720);
+                        stage.centerOnScreen();
+                    } catch (IOException e) {
+                        e.printStackTrace();
                         connectButton.setDisable(false);
-                        setStatus("[ LỖI TẢI GIAO DIỆN ] " + ex.getMessage(), true);
+                        setStatus("Lỗi tải giao diện truyền tệp: " + e.getMessage(), true);
                     }
                 });
-
-            } catch (Exception ex) {
+            } catch (Exception e) {
                 Platform.runLater(() -> {
                     connectButton.setDisable(false);
-                    setStatus("[ LỖI NGOẠI LỆ ] " + ex.getMessage(), true);
+                    setStatus("Lỗi trong quá trình kết nối: " + e.getMessage(), true);
                 });
             }
         }).start();
     }
 
-    private void setStatus(String message, boolean isError) {
-        statusLabel.setText(message);
-        if (isError) {
-            statusLabel.setStyle("-fx-text-fill: #DC2626; -fx-font-weight: bold;");
-        } else {
-            statusLabel.setStyle("-fx-text-fill: #059669; -fx-font-weight: bold;");
+    private void setStatus(String text, boolean isError) {
+        if (statusLabel != null) {
+            statusLabel.setText(text);
+            if (isError) {
+                statusLabel.setStyle("-fx-text-fill: #DC2626; -fx-font-weight: bold;");
+            } else {
+                statusLabel.setStyle("-fx-text-fill: #059669; -fx-font-weight: bold;");
+            }
         }
     }
 }

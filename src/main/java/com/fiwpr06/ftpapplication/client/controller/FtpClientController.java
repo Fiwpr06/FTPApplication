@@ -119,8 +119,12 @@ public class FtpClientController implements FtpClient.ClientEventListener {
         tblLocalFiles.setOnMouseClicked(event -> {
             if (event.getClickCount() == 2) {
                 LocalFileItem selected = tblLocalFiles.getSelectionModel().getSelectedItem();
-                if (selected != null && selected.isDirectory()) {
-                    loadLocalDirectory(selected.getFile());
+                if (selected != null) {
+                    if (selected.isDirectory()) {
+                        loadLocalDirectory(selected.getFile());
+                    } else {
+                        handleUploadSelected();
+                    }
                 }
             }
         });
@@ -128,8 +132,12 @@ public class FtpClientController implements FtpClient.ClientEventListener {
         tblRemoteFiles.setOnMouseClicked(event -> {
             if (event.getClickCount() == 2) {
                 RemoteFileItem selected = tblRemoteFiles.getSelectionModel().getSelectedItem();
-                if (selected != null && selected.isDirectory()) {
-                    enterRemoteDirectory(selected.getName());
+                if (selected != null) {
+                    if (selected.isDirectory()) {
+                        enterRemoteDirectory(selected.getName());
+                    } else {
+                        handleDownloadSelected();
+                    }
                 }
             }
         });

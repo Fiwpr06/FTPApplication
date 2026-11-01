@@ -10,6 +10,8 @@ import com.fiwpr06.ftpapplication.server.database.TransferLog;
 import com.fiwpr06.ftpapplication.server.database.TransferLogDao;
 import com.fiwpr06.ftpapplication.server.database.User;
 import com.fiwpr06.ftpapplication.server.database.UserDao;
+import javafx.animation.KeyFrame;
+import javafx.animation.Timeline;
 import javafx.application.Platform;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.FXCollections;
@@ -17,6 +19,12 @@ import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
 import javafx.scene.control.*;
 import javafx.scene.control.cell.PropertyValueFactory;
+import javafx.scene.input.Clipboard;
+import javafx.scene.input.ClipboardContent;
+import javafx.util.Duration;
+
+import java.awt.Desktop;
+import java.io.File;
 
 public class FtpServerController implements FtpServer.ServerEventListener {
 
@@ -26,6 +34,7 @@ public class FtpServerController implements FtpServer.ServerEventListener {
     @FXML private Button btnStart;
     @FXML private Button btnStop;
     @FXML private Label lblStatus;
+    @FXML private Label lblCopyFeedback;
 
     // Tab 1: Sessions
     @FXML private Label lblClientCount;
@@ -37,7 +46,20 @@ public class FtpServerController implements FtpServer.ServerEventListener {
     @FXML private TableColumn<FtpSessionHandler, String> colSessionPath;
     @FXML private TableColumn<FtpSessionHandler, String> colSessionTime;
 
-    // Tab 2: Users
+    // Tab 2: Logs
+    @FXML private TableView<TransferLog> tblLogs;
+    @FXML private TableColumn<TransferLog, Integer> colLogId;
+    @FXML private TableColumn<TransferLog, String> colLogUser;
+    @FXML private TableColumn<TransferLog, String> colLogAction;
+    @FXML private TableColumn<TransferLog, String> colLogFile;
+    @FXML private TableColumn<TransferLog, Long> colLogSize;
+    @FXML private TableColumn<TransferLog, String> colLogStatus;
+    @FXML private TableColumn<TransferLog, String> colLogTime;
+
+    // Tab 3: Console
+    @FXML private TextArea txtConsole;
+
+    // Tab 4: Users
     @FXML private TableView<User> tblUsers;
     @FXML private TableColumn<User, Integer> colUserId;
     @FXML private TableColumn<User, String> colUsername;
@@ -53,22 +75,10 @@ public class FtpServerController implements FtpServer.ServerEventListener {
     @FXML private CheckBox chkRead;
     @FXML private CheckBox chkWrite;
 
-    // Tab 3: Logs
-    @FXML private TableView<TransferLog> tblLogs;
-    @FXML private TableColumn<TransferLog, Integer> colLogId;
-    @FXML private TableColumn<TransferLog, String> colLogUser;
-    @FXML private TableColumn<TransferLog, String> colLogAction;
-    @FXML private TableColumn<TransferLog, String> colLogFile;
-    @FXML private TableColumn<TransferLog, Long> colLogSize;
-    @FXML private TableColumn<TransferLog, String> colLogStatus;
-    @FXML private TableColumn<TransferLog, String> colLogTime;
-
-    // Tab 4: Console
-    @FXML private TextArea txtConsole;
-
     private FtpServer server;
     private UserDao userDao;
     private TransferLogDao logDao;
+    private Timeline feedbackTimeline;
 
     private final ObservableList<FtpSessionHandler> sessionsList = FXCollections.observableArrayList();
     private final ObservableList<User> usersList = FXCollections.observableArrayList();
@@ -81,6 +91,9 @@ public class FtpServerController implements FtpServer.ServerEventListener {
         this.server = new FtpServer();
         this.server.addListener(this);
 
+        String localIp = NetworkUtil.getLocalIpAddress();
+        lblServerIp.setText(localIp);
+
         if (txtPasscode != null) {
             txtPasscode.setText(server.getConnectionPasscode());
             txtPasscode.textProperty().addListener((obs, oldVal, newVal) -> {
@@ -89,8 +102,6 @@ public class FtpServerController implements FtpServer.ServerEventListener {
                 }
             });
         }
-
-        lblServerIp.setText(NetworkUtil.getLocalIpAddress());
 
         setupTables();
         initDatabaseAndLoad();
@@ -248,8 +259,60 @@ public class FtpServerController implements FtpServer.ServerEventListener {
     }
 
     @FXML
+    public void handleCopyIp() {
+        String ip = lblServerIp.getText();
+        if (ip != null && !ip.isEmpty()) {
+            ClipboardContent content = new ClipboardContent();
+            content.putString(ip);
+            Clipboard.getSystemClipboard().setContent(content);
+            showFeedback("✓ Đã sao chép IP máy chủ: " + ip);
+        }
+    }
+
+    @FXML
+    public void handleCopyPasscode() {
+        String code = txtPasscode.getText();
+        if (code != null && !code.isEmpty()) {
+            ClipboardContent content = new ClipboardContent();
+            content.putString(code);
+            Clipboard.getSystemClipboard().setContent(content);
+            showFeedback("✓ Đã sao chép mã kết nối: " + code);
+        }
+    }
+
+    @FXML
+    public void handleOpenStorageFolder() {
+        try {
+            File storageDir = new File("ftp_root").getAbsoluteFile();
+            if (!storageDir.exists()) {
+                storageDir.mkdirs();
+            }
+            if (Desktop.isDesktopSupported() && Desktop.getDesktop().isSupported(Desktop.Action.OPEN)) {
+                Desktop.getDesktop().open(storageDir);
+                showFeedback("✓ Đã mở thư mục lưu trữ ftp_root");
+            } else {
+                showFeedback("Đường dẫn lưu trữ: " + storageDir.getAbsolutePath());
+            }
+        } catch (Exception e) {
+            logConsole("[ERROR] Không thể mở thư mục lưu trữ: " + e.getMessage());
+        }
+    }
+
+    private void showFeedback(String message) {
+        if (lblCopyFeedback != null) {
+            lblCopyFeedback.setText(message);
+            if (feedbackTimeline != null) {
+                feedbackTimeline.stop();
+            }
+            feedbackTimeline = new Timeline(new KeyFrame(Duration.seconds(3), e -> lblCopyFeedback.setText("")));
+            feedbackTimeline.play();
+        }
+    }
+
+    @FXML
     public void clearConsole() {
         txtConsole.clear();
+        showFeedback("✓ Đã dọn dẹp nhật ký");
     }
 
     private void logConsole(String line) {
@@ -261,27 +324,27 @@ public class FtpServerController implements FtpServer.ServerEventListener {
     @Override
     public void onServerStarted(int port) {
         Platform.runLater(() -> {
-            lblStatus.setText("RUNNING (PORT " + port + ")");
+            lblStatus.setText("● Đang chạy");
             lblStatus.getStyleClass().clear();
             lblStatus.getStyleClass().add("status-badge-running");
             btnStart.setDisable(true);
             btnStop.setDisable(false);
             txtPort.setDisable(true);
-            logConsole("[STATUS] FTP Server is RUNNING on port " + port);
+            logConsole("[STATUS] Máy chủ FTP đang hoạt động trên cổng " + port);
         });
     }
 
     @Override
     public void onServerStopped() {
         Platform.runLater(() -> {
-            lblStatus.setText("STOPPED");
+            lblStatus.setText("● Đang dừng");
             lblStatus.getStyleClass().clear();
             lblStatus.getStyleClass().add("status-badge-stopped");
             btnStart.setDisable(false);
             btnStop.setDisable(true);
             txtPort.setDisable(false);
             refreshActiveSessions();
-            logConsole("[STATUS] FTP Server has STOPPED.");
+            logConsole("[STATUS] Máy chủ FTP đã dừng hoạt động.");
         });
     }
 
