@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<VBox prefHeight="750.0" prefWidth="1100.0" spacing="0.0" xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.fiwpr06.ftpapplication.client.controller.FtpClientController">
+    <!-- Quickconnect Bar -->
+    <HBox styleClass="quickconnect-bar">
+        <Label text="Host:" style="-fx-text-fill: #94A3B8;" />
+        <TextField fx:id="txtHost" prefWidth="150.0" text="127.0.0.1" promptText="Host/IP" />
+        <Label text="Username:" style="-fx-text-fill: #94A3B8;" />
+        <TextField fx:id="txtUser" prefWidth="130.0" text="admin" promptText="Username" />
+        <Label text="Password:" style="-fx-text-fill: #94A3B8;" />
+        <PasswordField fx:id="txtPass" prefWidth="130.0" text="admin" promptText="Password" />
+        <Label text="Port:" style="-fx-text-fill: #94A3B8;" />
+        <TextField fx:id="txtPort" prefWidth="70.0" text="2121" promptText="Port" />
+        <Button fx:id="btnQuickconnect" onAction="#handleConnect" styleClass="btn-primary" text="⚡ Quickconnect" />
+        <Button fx:id="btnDisconnect" disable="true" onAction="#handleDisconnect" styleClass="btn-danger" text="Disconnect" />
+        <Region HBox.hgrow="ALWAYS" />
+        <Label fx:id="lblConnectionStatus" text="Disconnected" style="-fx-text-fill: #FF3B56; -fx-font-weight: bold;" />
+    </HBox>
+
+    <!-- Console Log Stream (Collapsible / Resizable) -->
+    <TitledPane expanded="true" text="Status Log / FTP Console" prefHeight="130.0">
+        <TextArea fx:id="txtConsole" editable="false" styleClass="console-area" wrapText="true" />
+    </TitledPane>
+
+    <!-- Main Dual-Pane Explorer -->
+    <SplitPane dividerPositions="0.5" VBox.vgrow="ALWAYS">
+        <!-- Left Pane: Local Site -->
+        <VBox spacing="6.0" styleClass="explorer-pane">
+            <HBox alignment="CENTER_LEFT" spacing="6.0" styleClass="explorer-header">
+                <Label styleClass="explorer-title" text="📁 Local Site:" />
+                <TextField fx:id="txtLocalPath" editable="false" HBox.hgrow="ALWAYS" />
+                <Button onAction="#handleLocalUp" styleClass="btn-secondary" text="⬆ Up" />
+                <Button onAction="#handleLocalRefresh" styleClass="btn-secondary" text="🔄" />
+                <Button onAction="#handleLocalNewFolder" styleClass="btn-secondary" text="➕ Dir" />
+                <Button onAction="#handleUploadSelected" styleClass="btn-action" text="Upload ➡" />
+            </HBox>
+            <TableView fx:id="tblLocalFiles" VBox.vgrow="ALWAYS">
+                <columns>
+                    <TableColumn fx:id="colLocalName" prefWidth="240.0" text="Filename" />
+                    <TableColumn fx:id="colLocalSize" prefWidth="100.0" text="Filesize" />
+                    <TableColumn fx:id="colLocalType" prefWidth="80.0" text="Filetype" />
+                    <TableColumn fx:id="colLocalTime" prefWidth="150.0" text="Last Modified" />
+                </columns>
+            </TableView>
+        </VBox>
+
+        <!-- Right Pane: Remote Site -->
+        <VBox spacing="6.0" styleClass="explorer-pane">
+            <HBox alignment="CENTER_LEFT" spacing="6.0" styleClass="explorer-header">
+                <Label styleClass="explorer-title" text="🌐 Remote Site:" />
+                <TextField fx:id="txtRemotePath" editable="false" HBox.hgrow="ALWAYS" text="/" />
+                <Button onAction="#handleRemoteUp" styleClass="btn-secondary" text="⬆ Up" />
+                <Button onAction="#handleRemoteRefresh" styleClass="btn-secondary" text="🔄" />
+                <Button onAction="#handleRemoteNewFolder" styleClass="btn-secondary" text="➕ Dir" />
+                <Button onAction="#handleDownloadSelected" styleClass="btn-action" text="⬅ Download" />
+                <Button onAction="#handleRemoteDelete" styleClass="btn-danger" text="🗑 Delete" />
+            </HBox>
+            <TableView fx:id="tblRemoteFiles" VBox.vgrow="ALWAYS">
+                <columns>
+                    <TableColumn fx:id="colRemoteName" prefWidth="220.0" text="Filename" />
+                    <TableColumn fx:id="colRemoteSize" prefWidth="100.0" text="Filesize" />
+                    <TableColumn fx:id="colRemotePerm" prefWidth="100.0" text="Permissions" />
+                    <TableColumn fx:id="colRemoteTime" prefWidth="140.0" text="Date Modified" />
+                </columns>
+            </TableView>
+        </VBox>
+    </SplitPane>
+
+    <!-- Bottom Transfer Queue Tab -->
+    <TabPane prefHeight="150.0" tabClosingPolicy="UNAVAILABLE">
+        <Tab text="Queued Transfers">
+            <TableView fx:id="tblQueue">
+                <columns>
+                    <TableColumn fx:id="colQFile" prefWidth="200.0" text="File" />
+                    <TableColumn fx:id="colQType" prefWidth="90.0" text="Direction" />
+                    <TableColumn fx:id="colQSize" prefWidth="100.0" text="Size" />
+                    <TableColumn fx:id="colQProgress" prefWidth="250.0" text="Progress" />
+                    <TableColumn fx:id="colQSpeed" prefWidth="120.0" text="Speed" />
+                    <TableColumn fx:id="colQStatus" prefWidth="120.0" text="Status" />
+                </columns>
+            </TableView>
+        </Tab>
+    </TabPane>
+
+    <!-- Bottom Status Bar -->
+    <HBox styleClass="status-bar">
+        <Label fx:id="lblBottomStatus" text="Ready." style="-fx-text-fill: #94A3B8;" />
+        <Region HBox.hgrow="ALWAYS" />
+        <ProgressBar fx:id="progressBarBottom" prefWidth="180.0" progress="0.0" visible="false" />
+        <Label text="Mode: PASV (Binary)" style="-fx-text-fill: #00D2E6;" />
+    </HBox>
+</VBox>

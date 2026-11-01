@@ -5,6 +5,8 @@ module com.fiwpr06.ftpapplication {
     requires java.desktop;
 
     opens com.fiwpr06.ftpapplication.common.model to javafx.base;
+    opens com.fiwpr06.ftpapplication.client to javafx.fxml;
+    opens com.fiwpr06.ftpapplication.client.controller to javafx.fxml;
     opens com.fiwpr06.ftpapplication.client.model to javafx.base;
     opens com.fiwpr06.ftpapplication.server to javafx.fxml;
     opens com.fiwpr06.ftpapplication.server.controller to javafx.fxml;
@@ -12,6 +14,8 @@ module com.fiwpr06.ftpapplication {
 
     exports com.fiwpr06.ftpapplication.common.model;
     exports com.fiwpr06.ftpapplication.common.util;
+    exports com.fiwpr06.ftpapplication.client;
+    exports com.fiwpr06.ftpapplication.client.controller;
     exports com.fiwpr06.ftpapplication.client.model;
     exports com.fiwpr06.ftpapplication.client.network;
     exports com.fiwpr06.ftpapplication.server;
