@@ -1,23 +1,41 @@
-# FTPApplication — Hệ thống FTP Server & Client (Chuẩn FileZilla + MySQL)
-### Báo cáo Thực hiện Bài Lab 2 — Môn Học Lập Trình Mạng
+# ⚡ FTPApplication — Hệ thống Truyền Tệp FTP Server & Client (FileZilla Style + MySQL)
 
-Dự án **FTPApplication** được xây dựng toàn diện đáp ứng 100% các yêu cầu của **Bài Lab 2**:
-* **Giao thức chuẩn FTP RFC 959:** Tách biệt 2 kênh kết nối: Kênh Điều khiển (Control Connection) trên cổng `2121` và Kênh Dữ liệu Chế độ Bị động (Passive Mode `PASV`).
-* **Cơ sở dữ liệu MySQL:** Tự động kết nối, tự động khởi tạo cơ sở dữ liệu `ftp_db` cùng 2 bảng `users` (quản lý tài khoản, không hash mật khẩu để dễ demo) và `transfer_logs` (ghi nhận lịch sử truyền tải file thời gian thực).
-* **Giao diện Client chuẩn FileZilla:** Bố cục Dual-Pane (Local Site & Remote Site), Quickconnect Bar, Status Console Log stream với mã phản hồi FTP (`220`, `331`, `230`, `257`, `250`, `227`, `150`, `226`,...), và hàng đợi truyền tải Transfer Queue với Progress Bar.
-* **Giao diện Server Dashboard:** Quản lý bật/tắt Server, giám sát Client đang kết nối, thêm/xóa/phân quyền tài khoản trong MySQL và xem lịch sử truyền file.
-* **Tương thích 100% với ứng dụng FileZilla thật:** Có thể mở phần mềm FileZilla trên máy và kết nối trực tiếp vào `127.0.0.1:2121`.
+Dự án **FTPApplication** là hệ thống máy chủ và ứng dụng máy khách truyền tệp tin hoàn chỉnh, tuân thủ chuẩn giao thức **FTP RFC 959**, tích hợp cơ sở dữ liệu **MySQL** và hỗ trợ cơ chế xác thực kết nối nhanh theo phong cách **PeerChat** (kết nối bằng Mã Passcode và Tên hiển thị, không cần đăng ký tài khoản rườm rà).
 
 ---
 
-## 1. Cấu trúc Cây Thư mục (Chuẩn Default-Tree & Clean Architecture)
+## 🌟 1. Điểm nổi bật & Tính năng chính
+
+1. **Cơ chế Kết nối Kiểu PeerChat (Passcode & Bí danh):**
+   - Người dùng không cần tạo tài khoản hay đăng ký mật khẩu phức tạp.
+   - Khi mở FTP Client, màn hình đăng nhập yêu cầu: `Địa chỉ Máy chủ (IP)`, `Cổng (Port)`, `Mã kết nối (Passcode - mặc định: FTP888)` và `Tên hiển thị (Bí danh)`.
+   - Máy chủ FTP có hiển thị và cho phép tùy biến Mã kết nối (Passcode). Khi nhập đúng mã, người dùng được cấp quyền truy cập ngay lập tức.
+   - Máy chủ tự động ghi nhận phiên đăng nhập vào bảng `active_sessions` trong CSDL MySQL.
+2. **Giao diện Light Modern High-Legibility (Chuẩn Design-Kit):**
+   - Thiết kế tông màu sáng sạch sẽ (`#F8FAFC`, `#FFFFFF`), chữ đen sắc nét (`#0F172A`), tương phản tuyệt đối, dễ nhìn khi thuyết trình.
+   - Triệt tiêu hoàn toàn hiện tượng text bị cắt thành `...`: các cột tên tệp, dung lượng, quyền hạn, thời gian đều có độ rộng tối ưu và tự động co giãn (`TableView.CONSTRAINED_RESIZE_POLICY`).
+3. **Giao thức chuẩn FTP RFC 959:**
+   - Hỗ trợ đầy đủ kênh điều khiển (Control Port `2121`) và kênh truyền dữ liệu bị động (Passive Mode `PASV`).
+   - Các lệnh FTP: `USER`, `PASS`, `PASV`, `LIST`, `CWD`, `PWD`, `CDUP`, `TYPE`, `RETR` (Tải về), `STOR` (Tải lên), `DELE`, `MKD`, `RMD`, `SIZE`, `QUIT`.
+4. **Giao diện Client Dual-Pane (Chuẩn FileZilla):**
+   - Khung duyệt thư mục máy tính (Local Site) và thư mục máy chủ (Remote Site) song song.
+   - Hàng đợi truyền tải (Transfer Queue) với thanh ProgressBar, hiển thị dung lượng và tốc độ truyền.
+   - Console log hiển thị luồng dữ liệu giao thức FTP theo thời gian thực.
+5. **Máy chủ FTP Server Dashboard:**
+   - Quản lý bật/tắt máy chủ, cấu hình cổng port và mã passcode.
+   - Giám sát danh sách Client đang kết nối thời gian thực (`active_sessions`).
+   - Nhật ký truyền tệp tự động lưu vào MySQL (`transfer_logs`).
+
+---
+
+## 🛠️ 2. Cấu trúc Cây Thư mục
 
 ```text
 FTPApplication/
 ├── db.properties               # Cấu hình kết nối MySQL (host, port, user, pass)
 ├── pom.xml                     # Cấu hình Maven (JavaFX 21, MySQL Connector/J 8.3.0)
 ├── START-SERVER.bat / .vbs     # 1-Click khởi chạy FTP Server Dashboard
-├── START-CLIENT.bat / .vbs     # 1-Click khởi chạy FTP Client Dual-Pane
+├── START-CLIENT.bat / .vbs     # 1-Click khởi chạy FTP Client
 ├── server_storage/files/       # Thư mục lưu trữ tệp tin gốc của Server
 └── src/
     ├── main/
@@ -29,7 +47,7 @@ FTPApplication/
     │   │       │   └── util/       # AlertHelper, NetworkUtil, DateTimeUtil, FileUtils
     │   │       ├── client/
     │   │       │   ├── ClientApp.java, ClientLauncher.java
-    │   │       │   ├── controller/ # FtpClientController.java
+    │   │       │   ├── controller/ # ConnectController.java, FtpClientController.java
     │   │       │   ├── model/      # LocalFileItem.java, RemoteFileItem.java
     │   │       │   └── network/    # FtpClient.java (RFC 959 Socket Engine)
     │   │       └── server/
@@ -40,69 +58,30 @@ FTPApplication/
     │   │           └── database/   # DatabaseConfig, FtpDatabaseManager, UserDao, TransferLogDao
     │   └── resources/
     │       └── com/fiwpr06/ftpapplication/
-    │           ├── css/            # client.css, server.css (Cyberpunk Slate Theme)
-    │           └── fxml/           # client_view.fxml, server_view.fxml
+    │           ├── css/            # client.css, server.css (Light Modern Theme)
+    │           └── fxml/           # connect_view.fxml, client_view.fxml, server_view.fxml
     └── test/
         └── java/com/fiwpr06/ftpapplication/
             ├── DatabaseTest.java           # Kiểm thử kết nối và CRUD MySQL
             ├── FtpProtocolTest.java        # Kiểm thử Handshake RFC 959
-            └── FtpClientIntegrationTest.java # Kiểm thử trọn vẹn Upload/Download/List/Delete
+            └── FtpClientIntegrationTest.java # Kiểm thử Upload/Download/List/Delete
 ```
 
 ---
 
-## 2. Hướng dẫn Khởi chạy & Vận hành
+## 🚀 3. Hướng dẫn Khởi chạy Nhanh
 
-### Cách 1: Khởi chạy 1-Click bằng Script (Khuyên dùng)
-1. **Bật FTP Server:** Nhấn đúp chuột vào `START-SERVER.bat` (hoặc `START-SERVER.vbs` để chạy ngầm).
-   - Nhấn nút **▶ Start Server** trên giao diện Server.
-   - Trạng thái sẽ chuyển sang màu xanh: `RUNNING (PORT 2121)`.
-2. **Bật FTP Client:** Nhấn đúp chuột vào `START-CLIENT.bat` (hoặc `START-CLIENT.vbs`).
-   - Nhập thông tin Quickconnect (đã điền sẵn mặc định):
-     - Host: `127.0.0.1`
-     - Username: `admin` (hoặc `user`)
-     - Password: `admin` (hoặc `123456`)
-     - Port: `2121`
-   - Nhấn **⚡ Quickconnect**.
-   - Giao diện Dual-Pane sẽ tải danh sách file trên máy và trên Server.
-   - Thử nghiệm:
-     - Chọn file bên **Local Site** -> Nhấn **Upload ➡** để đẩy file lên Server.
-     - Chọn file bên **Remote Site** -> Nhấn **⬅ Download** để tải file về máy.
-     - Nhấn **➕ Dir** để tạo thư mục mới.
-     - Nhấn **🗑 Delete** để xóa file.
+### Bước 1: Khởi động FTP Server
+1. Chạy `START-SERVER.bat` (hoặc `mvnw javafx:run -Pserver`).
+2. Giao diện Server hiển thị: Cổng lắng nghe `2121`, Mã Passcode mặc định `FTP888`.
+3. Bấm **▶ Bật Server**.
 
-### Cách 2: Khởi chạy bằng lệnh Maven
-* Khởi chạy Server:
-  ```powershell
-  .\mvnw.cmd javafx:run -Pserver
-  ```
-* Khởi chạy Client:
-  ```powershell
-  .\mvnw.cmd javafx:run -Pclient
-  ```
-
----
-
-## 3. Tài khoản Đăng nhập MySQL Mặc định
-
-Cơ sở dữ liệu tự động khởi tạo 2 tài khoản mẫu (không mã hóa mật khẩu):
-| Username | Password | Quyền Đọc (Read) | Quyền Ghi (Write) | Thư mục Home |
-| :--- | :--- | :---: | :---: | :--- |
-| `admin` | `admin` | Có | Có | `server_storage/files` |
-| `user` | `123456` | Có | Có | `server_storage/files` |
-
-*Người dùng có thể thêm/xóa tài khoản trực tiếp trên Tab **MySQL Accounts** của Server Dashboard.*
-
----
-
-## 4. Kết quả Kiểm thử Tự động (Automated Tests)
-
-Chạy toàn bộ test kiểm thử:
-```powershell
-.\mvnw.cmd clean test
-```
-Kết quả kiểm thử thực tế:
-* `DatabaseTest`: Pass kết nối MySQL `localhost:3306`, xác thực tài khoản và ghi nhận log.
-* `FtpProtocolTest`: Pass toàn bộ quy trình bắt tay giao thức FTP RFC 959 (`USER`, `PASS`, `PWD`, `TYPE`, `PASV`, `QUIT`).
-* `FtpClientIntegrationTest`: Pass toàn bộ kịch bản upload file, tải file về máy, kiểm tra checksum toàn vẹn, duyệt danh sách và xóa file.
-* **Tổng kết:** `Tests run: 4, Failures: 0, Errors: 0, Skipped: 0` (100% Passed).
+### Bước 2: Khởi động FTP Client
+1. Chạy `START-CLIENT.bat` (hoặc `mvnw javafx:run -Pclient`).
+2. Màn hình đăng nhập hiển thị:
+   - IP: `127.0.0.1` (hoặc IP mạng LAN của máy chủ)
+   - Port: `2121`
+   - Passcode: `FTP888`
+   - Bí danh: Nhập tên bạn (ví dụ: `Alice` hoặc `Bình Minh`)
+3. Bấm **KẾT NỐI MÁY CHỦ FTP** -> Giao diện FileZilla mở ra và tự động tải thư mục của máy chủ.
+4. Kéo thả hoặc chọn tệp rồi bấm **Tải lên** / **Tải về** để truyền tệp.

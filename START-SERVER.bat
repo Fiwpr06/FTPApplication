@@ -2,10 +2,10 @@
 setlocal
 cd /d "%~dp0"
 chcp 65001 >nul
-title FTP Server Dashboard (RFC 959 + MySQL) - Lab 2
+title FTP Application Server Dashboard (RFC 959 + MySQL)
 
 echo ========================================================
-echo   FTP Server Dashboard (RFC 959 + MySQL) - Lab 2
+echo   FTP Application Server Dashboard (RFC 959 + MySQL)
 echo ========================================================
 echo.
 

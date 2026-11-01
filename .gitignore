@@ -23,3 +23,8 @@ server_storage/files/*
 
 ### Mac OS ###
 .DS_Store
+
+### Temp office files ###
+~$*
+*.tmp
+

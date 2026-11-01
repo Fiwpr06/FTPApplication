@@ -22,7 +22,7 @@ public class ServerApp extends Application {
         Scene scene = new Scene(root);
         scene.getStylesheets().add(getClass().getResource("/com/fiwpr06/ftpapplication/css/server.css").toExternalForm());
 
-        stage.setTitle("⚡ FTP Server Dashboard (RFC 959 + MySQL) - Lab 2");
+        stage.setTitle("⚡ FTP Application Server Dashboard (RFC 959 + MySQL)");
         stage.setScene(scene);
         stage.setMinWidth(850);
         stage.setMinHeight(550);

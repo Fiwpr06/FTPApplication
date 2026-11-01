@@ -2,10 +2,10 @@
 setlocal
 cd /d "%~dp0"
 chcp 65001 >nul
-title FTP Client (FileZilla Style) - Lab 2
+title FTP Application Client (FileZilla Style)
 
 echo ========================================================
-echo   FTP Client (FileZilla Style) - Lab 2
+echo   FTP Application Client (FileZilla Style)
 echo ========================================================
 echo.
 
