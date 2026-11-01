@@ -1,0 +1,128 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<VBox prefHeight="700.0" prefWidth="950.0" spacing="0.0" xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.fiwpr06.ftpapplication.server.controller.FtpServerController">
+    <!-- Header HUD Bar -->
+    <HBox alignment="CENTER_LEFT" spacing="16.0" styleClass="hud-bar">
+        <Label styleClass="hud-title" text="⚡ FTP SERVER (RFC 959 + MySQL)" />
+        <Region HBox.hgrow="ALWAYS" />
+        <Label text="Server IP:" style="-fx-text-fill: #94A3B8;" />
+        <Label fx:id="lblServerIp" text="127.0.0.1" style="-fx-text-fill: #00D2E6; -fx-font-weight: bold;" />
+        <Separator orientation="VERTICAL" />
+        <Label text="Port:" style="-fx-text-fill: #94A3B8;" />
+        <TextField fx:id="txtPort" prefWidth="80.0" text="2121" />
+        <Button fx:id="btnStart" onAction="#handleStartServer" styleClass="btn-primary" text="▶ Start Server" />
+        <Button fx:id="btnStop" disable="true" onAction="#handleStopServer" styleClass="btn-danger" text="⏹ Stop Server" />
+        <Label fx:id="lblStatus" styleClass="status-badge-stopped" text="STOPPED" />
+    </HBox>
+
+    <!-- Main Content Tabs -->
+    <TabPane tabClosingPolicy="UNAVAILABLE" VBox.vgrow="ALWAYS">
+        <!-- Tab 1: Active Sessions -->
+        <Tab text="Active Clients">
+            <VBox spacing="10.0">
+                <padding>
+                    <Insets bottom="12.0" left="12.0" right="12.0" top="12.0" />
+                </padding>
+                <HBox alignment="CENTER_LEFT" spacing="10.0">
+                    <Label text="Connected Clients:" style="-fx-font-weight: bold; -fx-text-fill: #00D2E6;" />
+                    <Label fx:id="lblClientCount" text="0 clients online" style="-fx-text-fill: #2EE68A;" />
+                    <Region HBox.hgrow="ALWAYS" />
+                    <Button onAction="#refreshActiveSessions" styleClass="btn-secondary" text="🔄 Refresh" />
+                    <Button onAction="#disconnectSelectedClient" styleClass="btn-danger" text="❌ Disconnect Client" />
+                </HBox>
+                <TableView fx:id="tblSessions" VBox.vgrow="ALWAYS">
+                    <columns>
+                        <TableColumn fx:id="colSessionId" prefWidth="100.0" text="Session ID" />
+                        <TableColumn fx:id="colClientIp" prefWidth="140.0" text="Client IP" />
+                        <TableColumn fx:id="colClientPort" prefWidth="90.0" text="Port" />
+                        <TableColumn fx:id="colSessionUser" prefWidth="140.0" text="Username" />
+                        <TableColumn fx:id="colSessionPath" prefWidth="250.0" text="Current Virtual Path" />
+                        <TableColumn fx:id="colSessionTime" prefWidth="180.0" text="Connected Time" />
+                    </columns>
+                </TableView>
+            </VBox>
+        </Tab>
+
+        <!-- Tab 2: User Management (MySQL) -->
+        <Tab text="MySQL Accounts">
+            <VBox spacing="10.0">
+                <padding>
+                    <Insets bottom="12.0" left="12.0" right="12.0" top="12.0" />
+                </padding>
+                <HBox alignment="CENTER_LEFT" spacing="10.0">
+                    <Label text="Database Table: users" style="-fx-font-weight: bold; -fx-text-fill: #00D2E6;" />
+                    <Region HBox.hgrow="ALWAYS" />
+                    <Button onAction="#refreshUsers" styleClass="btn-secondary" text="🔄 Reload Users" />
+                    <Button onAction="#handleDeleteUser" styleClass="btn-danger" text="🗑 Delete User" />
+                </HBox>
+                <TableView fx:id="tblUsers" VBox.vgrow="ALWAYS">
+                    <columns>
+                        <TableColumn fx:id="colUserId" prefWidth="60.0" text="ID" />
+                        <TableColumn fx:id="colUsername" prefWidth="150.0" text="Username" />
+                        <TableColumn fx:id="colPassword" prefWidth="150.0" text="Password (Plain)" />
+                        <TableColumn fx:id="colHomeDir" prefWidth="240.0" text="Home Directory" />
+                        <TableColumn fx:id="colPermRead" prefWidth="90.0" text="Read" />
+                        <TableColumn fx:id="colPermWrite" prefWidth="90.0" text="Write" />
+                        <TableColumn fx:id="colUserActive" prefWidth="90.0" text="Active" />
+                    </columns>
+                </TableView>
+                <!-- Add User Bar -->
+                <TitledPane expanded="false" text="➕ Add New User to MySQL">
+                    <HBox alignment="CENTER_LEFT" spacing="10.0">
+                        <padding><Insets bottom="8.0" left="8.0" right="8.0" top="8.0" /></padding>
+                        <TextField fx:id="txtNewUser" promptText="Username" />
+                        <TextField fx:id="txtNewPass" promptText="Password (plain)" />
+                        <TextField fx:id="txtNewHome" promptText="Home Dir" text="server_storage/files" HBox.hgrow="ALWAYS" />
+                        <CheckBox fx:id="chkRead" selected="true" text="Read" />
+                        <CheckBox fx:id="chkWrite" selected="true" text="Write" />
+                        <Button onAction="#handleAddUser" styleClass="btn-primary" text="Add User" />
+                    </HBox>
+                </TitledPane>
+            </VBox>
+        </Tab>
+
+        <!-- Tab 3: Transfer History (MySQL) -->
+        <Tab text="MySQL Transfer Logs">
+            <VBox spacing="10.0">
+                <padding>
+                    <Insets bottom="12.0" left="12.0" right="12.0" top="12.0" />
+                </padding>
+                <HBox alignment="CENTER_LEFT" spacing="10.0">
+                    <Label text="Database Table: transfer_logs" style="-fx-font-weight: bold; -fx-text-fill: #00D2E6;" />
+                    <Region HBox.hgrow="ALWAYS" />
+                    <Button onAction="#refreshLogs" styleClass="btn-secondary" text="🔄 Reload Logs" />
+                </HBox>
+                <TableView fx:id="tblLogs" VBox.vgrow="ALWAYS">
+                    <columns>
+                        <TableColumn fx:id="colLogId" prefWidth="60.0" text="ID" />
+                        <TableColumn fx:id="colLogUser" prefWidth="140.0" text="User" />
+                        <TableColumn fx:id="colLogAction" prefWidth="120.0" text="Action" />
+                        <TableColumn fx:id="colLogFile" prefWidth="280.0" text="File Name" />
+                        <TableColumn fx:id="colLogSize" prefWidth="120.0" text="Size (bytes)" />
+                        <TableColumn fx:id="colLogStatus" prefWidth="100.0" text="Status" />
+                        <TableColumn fx:id="colLogTime" prefWidth="180.0" text="Timestamp" />
+                    </columns>
+                </TableView>
+            </VBox>
+        </Tab>
+
+        <!-- Tab 4: Live Server Console -->
+        <Tab text="Live Console">
+            <VBox spacing="8.0">
+                <padding>
+                    <Insets bottom="12.0" left="12.0" right="12.0" top="12.0" />
+                </padding>
+                <HBox alignment="CENTER_LEFT" spacing="10.0">
+                    <Label text="Real-time Command &amp; Reply Stream:" style="-fx-text-fill: #94A3B8;" />
+                    <Region HBox.hgrow="ALWAYS" />
+                    <Button onAction="#clearConsole" styleClass="btn-secondary" text="Clear Console" />
+                </HBox>
+                <TextArea fx:id="txtConsole" editable="false" styleClass="console-area" wrapText="true" VBox.vgrow="ALWAYS" />
+            </VBox>
+        </Tab>
+    </TabPane>
+</VBox>
