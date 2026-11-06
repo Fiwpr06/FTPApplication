@@ -193,6 +193,9 @@ public class FtpServerController implements FtpServer.ServerEventListener {
     public void refreshActiveSessions() {
         sessionsList.setAll(server.getActiveSessions());
         lblClientCount.setText(sessionsList.size() + " clients online");
+        if (tblSessions != null) {
+            tblSessions.refresh();
+        }
     }
 
     @FXML
@@ -209,6 +212,9 @@ public class FtpServerController implements FtpServer.ServerEventListener {
     @FXML
     public void refreshUsers() {
         usersList.setAll(userDao.getAllUsers());
+        if (tblUsers != null) {
+            tblUsers.refresh();
+        }
     }
 
     @FXML
@@ -256,6 +262,9 @@ public class FtpServerController implements FtpServer.ServerEventListener {
     @FXML
     public void refreshLogs() {
         logsList.setAll(logDao.getRecentLogs(50));
+        if (tblLogs != null) {
+            tblLogs.refresh();
+        }
     }
 
     @FXML

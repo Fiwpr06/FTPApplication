@@ -28,8 +28,12 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public class FtpClientController implements FtpClient.ClientEventListener {
+
+    private static final Logger LOGGER = Logger.getLogger(FtpClientController.class.getName());
 
     // Quickconnect Bar
     @FXML private TextField txtHost;
@@ -328,6 +332,26 @@ public class FtpClientController implements FtpClient.ClientEventListener {
             return a.getName().compareToIgnoreCase(b.getName());
         });
         localFilesList.setAll(items);
+        if (tblLocalFiles != null) {
+            tblLocalFiles.refresh();
+        }
+    }
+
+    private void updateRemoteFilesTable(String pwd, List<RemoteFileItem> list) {
+        if (pwd != null && txtRemotePath != null) {
+            txtRemotePath.setText(pwd);
+        }
+        if (list != null) {
+            list.sort((a, b) -> {
+                if (a.isDirectory() && !b.isDirectory()) return -1;
+                if (!a.isDirectory() && b.isDirectory()) return 1;
+                return a.getName().compareToIgnoreCase(b.getName());
+            });
+            remoteFilesList.setAll(list);
+            if (tblRemoteFiles != null) {
+                tblRemoteFiles.refresh();
+            }
+        }
     }
 
     @FXML
@@ -369,16 +393,7 @@ public class FtpClientController implements FtpClient.ClientEventListener {
             try {
                 String pwd = client.pwd();
                 List<RemoteFileItem> list = client.list();
-                Platform.runLater(() -> {
-                    txtRemotePath.setText(pwd);
-                    // Sap xep thu muc len truoc
-                    list.sort((a, b) -> {
-                        if (a.isDirectory() && !b.isDirectory()) return -1;
-                        if (!a.isDirectory() && b.isDirectory()) return 1;
-                        return a.getName().compareToIgnoreCase(b.getName());
-                    });
-                    remoteFilesList.setAll(list);
-                });
+                Platform.runLater(() -> updateRemoteFilesTable(pwd, list));
             } catch (IOException e) {
                 Platform.runLater(() -> AlertHelper.showError("Error", "Loi lay danh sach file remote: " + e.getMessage()));
             }
@@ -520,13 +535,35 @@ public class FtpClientController implements FtpClient.ClientEventListener {
                         });
                     });
 
+                    // Lấy danh sách file remote ngay trên worker thread một cách an toàn và tuần tự
+                    String pwd = null;
+                    List<RemoteFileItem> remoteList = null;
+                    if (ok) {
+                        try {
+                            pwd = client.pwd();
+                            remoteList = client.list();
+                        } catch (Exception ex) {
+                            LOGGER.log(Level.WARNING, "Loi lay danh sach file remote sau khi upload: " + ex.getMessage());
+                        }
+                    }
+
+                    final String finalPwd = pwd;
+                    final List<RemoteFileItem> finalRemoteList = remoteList;
+
                     Platform.runLater(() -> {
                         if (ok) {
                             task.updateProgress(fileToUpload.length(), 0);
                             task.progressProperty().set(1.0);
                             task.statusProperty().set(TransferStatus.COMPLETED);
                             lblBottomStatus.setText("Đã tải lên thành công: " + remoteFileName);
-                            refreshRemoteDirectory();
+
+                            // Lam moi ca thu muc Remote va Local tren giao dien
+                            if (finalRemoteList != null) {
+                                updateRemoteFilesTable(finalPwd, finalRemoteList);
+                            } else {
+                                refreshRemoteDirectory();
+                            }
+                            loadLocalDirectory(currentLocalDir);
                         } else {
                             task.statusProperty().set(TransferStatus.FAILED);
                             lblBottomStatus.setText("Tải lên thất bại: " + remoteFileName);
@@ -589,13 +626,35 @@ public class FtpClientController implements FtpClient.ClientEventListener {
                         });
                     });
 
+                    // Lấy danh sách file remote ngay trên worker thread một cách an toàn và tuần tự
+                    String pwd = null;
+                    List<RemoteFileItem> remoteList = null;
+                    if (ok) {
+                        try {
+                            pwd = client.pwd();
+                            remoteList = client.list();
+                        } catch (Exception ex) {
+                            LOGGER.log(Level.WARNING, "Loi lay danh sach file remote sau khi download: " + ex.getMessage());
+                        }
+                    }
+
+                    final String finalPwd = pwd;
+                    final List<RemoteFileItem> finalRemoteList = remoteList;
+
                     Platform.runLater(() -> {
                         if (ok) {
                             task.updateProgress(selected.getSize(), 0);
                             task.progressProperty().set(1.0);
                             task.statusProperty().set(TransferStatus.COMPLETED);
                             lblBottomStatus.setText("Đã tải về thành công: " + remoteFileName);
+
+                            // Lam moi ca thu muc Local va Remote tren giao dien
                             loadLocalDirectory(currentLocalDir);
+                            if (finalRemoteList != null) {
+                                updateRemoteFilesTable(finalPwd, finalRemoteList);
+                            } else {
+                                refreshRemoteDirectory();
+                            }
                         } else {
                             task.statusProperty().set(TransferStatus.FAILED);
                             lblBottomStatus.setText("Tải về thất bại: " + remoteFileName);
