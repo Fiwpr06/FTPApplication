@@ -15,7 +15,10 @@ import javafx.fxml.FXML;
 import javafx.scene.control.*;
 import javafx.scene.control.cell.ProgressBarTableCell;
 import javafx.scene.control.cell.PropertyValueFactory;
+import javafx.stage.DirectoryChooser;
+import javafx.stage.FileChooser;
 import javafx.stage.Stage;
+import javafx.stage.Window;
 
 import java.io.File;
 import java.io.IOException;
@@ -28,6 +31,9 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -43,6 +49,7 @@ public class FtpClientController implements FtpClient.ClientEventListener {
     @FXML private Button btnQuickconnect;
     @FXML private Button btnDisconnect;
     @FXML private Label lblConnectionStatus;
+    @FXML private Label lblAutoSyncStatus;
 
     // Status Log Console
     @FXML private TextArea txtConsole;
@@ -88,6 +95,9 @@ public class FtpClientController implements FtpClient.ClientEventListener {
         t.setDaemon(true);
         return t;
     });
+
+    private final AtomicBoolean isTransferring = new AtomicBoolean(false);
+    private ScheduledExecutorService syncScheduler;
 
     @FXML
     public void initialize() {
@@ -202,6 +212,94 @@ public class FtpClientController implements FtpClient.ClientEventListener {
         });
     }
 
+    // ================= DONG BO TU DONG (AUTO-SYNC ENGINE) =================
+
+    private synchronized void startAutoSync() {
+        stopAutoSync();
+        if (lblAutoSyncStatus != null) {
+            lblAutoSyncStatus.setText("Auto-Sync: BẬT");
+            lblAutoSyncStatus.setStyle("-fx-text-fill: #059669; -fx-background-color: #ECFDF5;");
+        }
+        syncScheduler = Executors.newSingleThreadScheduledExecutor(r -> {
+            Thread t = new Thread(r, "FtpAutoSyncWorker");
+            t.setDaemon(true);
+            return t;
+        });
+
+        syncScheduler.scheduleWithFixedDelay(() -> {
+            try {
+                if (client == null || !client.isConnected() || isTransferring.get()) {
+                    return;
+                }
+
+                // 1. Kiem tra thu muc Remote khi kenh truyen khong ban
+                String currentRemotePwd = client.pwd();
+                List<RemoteFileItem> latestRemoteList = client.list();
+                if (latestRemoteList != null && hasRemoteChanged(latestRemoteList)) {
+                    Platform.runLater(() -> updateRemoteFilesTable(currentRemotePwd, latestRemoteList));
+                }
+
+                // 2. Kiem tra thu muc Local
+                if (currentLocalDir != null && currentLocalDir.exists() && currentLocalDir.isDirectory()) {
+                    if (hasLocalChanged(currentLocalDir)) {
+                        Platform.runLater(() -> loadLocalDirectory(currentLocalDir));
+                    }
+                }
+            } catch (Exception ignored) {
+                // Bo qua ngoai le nhat thoi khi ping socket
+            }
+        }, 1500, 2500, TimeUnit.MILLISECONDS);
+    }
+
+    private synchronized void stopAutoSync() {
+        if (lblAutoSyncStatus != null) {
+            lblAutoSyncStatus.setText("Auto-Sync: TẮT");
+            lblAutoSyncStatus.setStyle("-fx-text-fill: #94A3B8; -fx-background-color: #F1F5F9;");
+        }
+        if (syncScheduler != null && !syncScheduler.isShutdown()) {
+            syncScheduler.shutdownNow();
+            syncScheduler = null;
+        }
+    }
+
+    private boolean hasRemoteChanged(List<RemoteFileItem> newList) {
+        if (newList == null) return false;
+        if (newList.size() != remoteFilesList.size()) return true;
+        for (int i = 0; i < newList.size(); i++) {
+            RemoteFileItem itemNew = newList.get(i);
+            RemoteFileItem itemOld = remoteFilesList.get(i);
+            if (!itemNew.getName().equals(itemOld.getName())
+                    || itemNew.getSize() != itemOld.getSize()
+                    || itemNew.isDirectory() != itemOld.isDirectory()) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private boolean hasLocalChanged(File dir) {
+        if (dir == null || !dir.exists() || !dir.isDirectory()) return false;
+        File[] files = dir.listFiles();
+        int count = files == null ? 0 : files.length;
+        if (count != localFilesList.size()) return true;
+        if (files != null) {
+            for (File f : files) {
+                boolean found = false;
+                for (LocalFileItem item : localFilesList) {
+                    if (item.getFile().getName().equals(f.getName())) {
+                        if (item.getFile().length() != f.length() || item.getFile().lastModified() != f.lastModified()) {
+                            return true;
+                        }
+                        found = true;
+                        break;
+                    }
+                }
+                if (!found) return true;
+            }
+        }
+        return false;
+    }
+
     // ================= KET NOI & DANG NHAP =================
 
     @FXML
@@ -247,6 +345,7 @@ public class FtpClientController implements FtpClient.ClientEventListener {
                         btnDisconnect.setDisable(false);
                         lblBottomStatus.setText("Logged in as " + user);
                         refreshRemoteDirectory();
+                        startAutoSync();
                     } else {
                         btnQuickconnect.setDisable(false);
                         lblBottomStatus.setText("Authentication failed.");
@@ -284,10 +383,12 @@ public class FtpClientController implements FtpClient.ClientEventListener {
         if (lblBottomStatus != null) lblBottomStatus.setText("Đã đăng nhập thành công với bí danh " + displayName);
 
         refreshRemoteDirectory();
+        startAutoSync();
     }
 
     @FXML
     public void handleDisconnect() {
+        stopAutoSync();
         if (client != null) {
             client.disconnect();
         }
@@ -492,6 +593,27 @@ public class FtpClientController implements FtpClient.ClientEventListener {
     // ================= TRUYEN TAI TAP TIN (UPLOAD & DOWNLOAD) =================
 
     @FXML
+    public void handlePickAndUpload() {
+        if (!client.isConnected()) {
+            AlertHelper.showWarning("Chưa kết nối", "Vui lòng kết nối tới FTP Server trước khi tải lên.");
+            return;
+        }
+
+        FileChooser fileChooser = new FileChooser();
+        fileChooser.setTitle("Chọn tệp tải lên FTP Server");
+        if (currentLocalDir != null && currentLocalDir.exists() && currentLocalDir.isDirectory()) {
+            fileChooser.setInitialDirectory(currentLocalDir);
+        }
+        Window window = tblLocalFiles.getScene().getWindow();
+        List<File> files = fileChooser.showOpenMultipleDialog(window);
+        if (files == null || files.isEmpty()) return;
+
+        for (File f : files) {
+            enqueueUploadTask(f);
+        }
+    }
+
+    @FXML
     public void handleUploadSelected() {
         if (!client.isConnected()) {
             AlertHelper.showWarning("Chưa kết nối", "Vui lòng kết nối tới FTP Server trước khi tải lên.");
@@ -506,79 +628,85 @@ public class FtpClientController implements FtpClient.ClientEventListener {
 
         for (LocalFileItem selected : selectedItems) {
             if (selected == null || selected.isDirectory()) continue;
+            enqueueUploadTask(selected.getFile());
+        }
+    }
 
-            File fileToUpload = selected.getFile();
-            String remoteFileName = fileToUpload.getName();
-            TransferTask task = new TransferTask(
-                    UUID.randomUUID().toString().substring(0, 8),
-                    remoteFileName,
-                    fileToUpload.getAbsolutePath(),
-                    txtRemotePath.getText() + "/" + remoteFileName,
-                    TransferTask.Type.UPLOAD,
-                    fileToUpload.length()
-            );
-            queueList.add(task);
+    private void enqueueUploadTask(File fileToUpload) {
+        if (fileToUpload == null || !fileToUpload.exists() || fileToUpload.isDirectory()) return;
 
-            transferExecutor.submit(() -> {
-                Platform.runLater(() -> {
-                    task.statusProperty().set(TransferStatus.TRANSFERRING);
-                    progressBarBottom.setVisible(true);
-                    progressBarBottom.setProgress(0.0);
-                    lblBottomStatus.setText("Đang tải lên " + remoteFileName + "...");
+        String remoteFileName = fileToUpload.getName();
+        TransferTask task = new TransferTask(
+                UUID.randomUUID().toString().substring(0, 8),
+                remoteFileName,
+                fileToUpload.getAbsolutePath(),
+                txtRemotePath.getText() + "/" + remoteFileName,
+                TransferTask.Type.UPLOAD,
+                fileToUpload.length()
+        );
+        queueList.add(task);
+
+        transferExecutor.submit(() -> {
+            isTransferring.set(true);
+            Platform.runLater(() -> {
+                task.statusProperty().set(TransferStatus.TRANSFERRING);
+                progressBarBottom.setVisible(true);
+                progressBarBottom.setProgress(0.0);
+                lblBottomStatus.setText("Đang tải lên " + remoteFileName + "...");
+            });
+
+            try {
+                boolean ok = client.uploadFile(fileToUpload, remoteFileName, (transferred, total, speed) -> {
+                    Platform.runLater(() -> {
+                        task.updateProgress(transferred, speed);
+                        progressBarBottom.setProgress(task.getProgress());
+                    });
                 });
 
-                try {
-                    boolean ok = client.uploadFile(fileToUpload, remoteFileName, (transferred, total, speed) -> {
-                        Platform.runLater(() -> {
-                            task.updateProgress(transferred, speed);
-                            progressBarBottom.setProgress(task.getProgress());
-                        });
-                    });
-
-                    // Lấy danh sách file remote ngay trên worker thread một cách an toàn và tuần tự
-                    String pwd = null;
-                    List<RemoteFileItem> remoteList = null;
-                    if (ok) {
-                        try {
-                            pwd = client.pwd();
-                            remoteList = client.list();
-                        } catch (Exception ex) {
-                            LOGGER.log(Level.WARNING, "Loi lay danh sach file remote sau khi upload: " + ex.getMessage());
-                        }
+                // Lay danh sach file remote ngay tren worker thread mot cach an toan va tuan tu
+                String pwd = null;
+                List<RemoteFileItem> remoteList = null;
+                if (ok) {
+                    try {
+                        pwd = client.pwd();
+                        remoteList = client.list();
+                    } catch (Exception ex) {
+                        LOGGER.log(Level.WARNING, "Loi lay danh sach file remote sau khi upload: " + ex.getMessage());
                     }
-
-                    final String finalPwd = pwd;
-                    final List<RemoteFileItem> finalRemoteList = remoteList;
-
-                    Platform.runLater(() -> {
-                        if (ok) {
-                            task.updateProgress(fileToUpload.length(), 0);
-                            task.progressProperty().set(1.0);
-                            task.statusProperty().set(TransferStatus.COMPLETED);
-                            lblBottomStatus.setText("Đã tải lên thành công: " + remoteFileName);
-
-                            // Lam moi ca thu muc Remote va Local tren giao dien
-                            if (finalRemoteList != null) {
-                                updateRemoteFilesTable(finalPwd, finalRemoteList);
-                            } else {
-                                refreshRemoteDirectory();
-                            }
-                            loadLocalDirectory(currentLocalDir);
-                        } else {
-                            task.statusProperty().set(TransferStatus.FAILED);
-                            lblBottomStatus.setText("Tải lên thất bại: " + remoteFileName);
-                        }
-                        progressBarBottom.setVisible(false);
-                    });
-                } catch (Exception e) {
-                    Platform.runLater(() -> {
-                        task.statusProperty().set(TransferStatus.FAILED);
-                        lblBottomStatus.setText("Lỗi tải lên: " + e.getMessage());
-                        progressBarBottom.setVisible(false);
-                    });
                 }
-            });
-        }
+
+                final String finalPwd = pwd;
+                final List<RemoteFileItem> finalRemoteList = remoteList;
+
+                Platform.runLater(() -> {
+                    if (ok) {
+                        task.updateProgress(fileToUpload.length(), 0);
+                        task.progressProperty().set(1.0);
+                        task.statusProperty().set(TransferStatus.COMPLETED);
+                        lblBottomStatus.setText("Đã tải lên thành công: " + remoteFileName);
+
+                        // Khi tải lên server thành công -> Refresh ngay thư mục máy chủ
+                        if (finalRemoteList != null) {
+                            updateRemoteFilesTable(finalPwd, finalRemoteList);
+                        } else {
+                            refreshRemoteDirectory();
+                        }
+                    } else {
+                        task.statusProperty().set(TransferStatus.FAILED);
+                        lblBottomStatus.setText("Tải lên thất bại: " + remoteFileName);
+                    }
+                    progressBarBottom.setVisible(false);
+                });
+            } catch (Exception e) {
+                Platform.runLater(() -> {
+                    task.statusProperty().set(TransferStatus.FAILED);
+                    lblBottomStatus.setText("Lỗi tải lên: " + e.getMessage());
+                    progressBarBottom.setVisible(false);
+                });
+            } finally {
+                isTransferring.set(false);
+            }
+        });
     }
 
     @FXML
@@ -594,82 +722,103 @@ public class FtpClientController implements FtpClient.ClientEventListener {
             return;
         }
 
+        // Khi bấm tải về -> Refresh ngay thư mục máy tính
+        loadLocalDirectory(currentLocalDir);
+
         for (RemoteFileItem selected : selectedItems) {
             if (selected == null || selected.isDirectory()) continue;
+            enqueueDownloadTask(selected, currentLocalDir);
+        }
+    }
 
-            String remoteFileName = selected.getName();
-            File targetLocalFile = new File(currentLocalDir, remoteFileName);
+    @FXML
+    public void handleDownloadToFolder() {
+        if (!client.isConnected()) {
+            AlertHelper.showWarning("Chưa kết nối", "Vui lòng kết nối tới FTP Server trước khi tải về.");
+            return;
+        }
 
-            TransferTask task = new TransferTask(
-                    UUID.randomUUID().toString().substring(0, 8),
-                    remoteFileName,
-                    targetLocalFile.getAbsolutePath(),
-                    txtRemotePath.getText() + "/" + remoteFileName,
-                    TransferTask.Type.DOWNLOAD,
-                    selected.getSize()
-            );
-            queueList.add(task);
+        List<RemoteFileItem> selectedItems = new ArrayList<>(tblRemoteFiles.getSelectionModel().getSelectedItems());
+        if (selectedItems.isEmpty()) {
+            AlertHelper.showWarning("Thông báo", "Vui lòng chọn ít nhất một tập tin trên máy chủ để tải về.");
+            return;
+        }
 
-            transferExecutor.submit(() -> {
-                Platform.runLater(() -> {
-                    task.statusProperty().set(TransferStatus.TRANSFERRING);
-                    progressBarBottom.setVisible(true);
-                    progressBarBottom.setProgress(0.0);
-                    lblBottomStatus.setText("Đang tải về " + remoteFileName + "...");
+        DirectoryChooser dirChooser = new DirectoryChooser();
+        dirChooser.setTitle("Chọn thư mục lưu tệp tải về");
+        if (currentLocalDir != null && currentLocalDir.exists()) {
+            dirChooser.setInitialDirectory(currentLocalDir);
+        }
+        Window window = tblRemoteFiles.getScene().getWindow();
+        File destFolder = dirChooser.showDialog(window);
+        if (destFolder == null) return;
+
+        // Cập nhật thư mục máy tính sang nơi lưu vừa chọn và refresh ngay
+        currentLocalDir = destFolder;
+        loadLocalDirectory(destFolder);
+
+        for (RemoteFileItem selected : selectedItems) {
+            if (selected == null || selected.isDirectory()) continue;
+            enqueueDownloadTask(selected, destFolder);
+        }
+    }
+
+    private void enqueueDownloadTask(RemoteFileItem selected, File destFolder) {
+        String remoteFileName = selected.getName();
+        File targetLocalFile = new File(destFolder, remoteFileName);
+
+        TransferTask task = new TransferTask(
+                UUID.randomUUID().toString().substring(0, 8),
+                remoteFileName,
+                targetLocalFile.getAbsolutePath(),
+                txtRemotePath.getText() + "/" + remoteFileName,
+                TransferTask.Type.DOWNLOAD,
+                selected.getSize()
+        );
+        queueList.add(task);
+
+        transferExecutor.submit(() -> {
+            isTransferring.set(true);
+            Platform.runLater(() -> {
+                task.statusProperty().set(TransferStatus.TRANSFERRING);
+                progressBarBottom.setVisible(true);
+                progressBarBottom.setProgress(0.0);
+                lblBottomStatus.setText("Đang tải về " + remoteFileName + "...");
+            });
+
+            try {
+                boolean ok = client.downloadFile(remoteFileName, targetLocalFile, (transferred, total, speed) -> {
+                    Platform.runLater(() -> {
+                        task.updateProgress(transferred, speed);
+                        progressBarBottom.setProgress(task.getProgress());
+                    });
                 });
 
-                try {
-                    boolean ok = client.downloadFile(remoteFileName, targetLocalFile, (transferred, total, speed) -> {
-                        Platform.runLater(() -> {
-                            task.updateProgress(transferred, speed);
-                            progressBarBottom.setProgress(task.getProgress());
-                        });
-                    });
-
-                    // Lấy danh sách file remote ngay trên worker thread một cách an toàn và tuần tự
-                    String pwd = null;
-                    List<RemoteFileItem> remoteList = null;
+                Platform.runLater(() -> {
                     if (ok) {
-                        try {
-                            pwd = client.pwd();
-                            remoteList = client.list();
-                        } catch (Exception ex) {
-                            LOGGER.log(Level.WARNING, "Loi lay danh sach file remote sau khi download: " + ex.getMessage());
-                        }
-                    }
+                        task.updateProgress(selected.getSize(), 0);
+                        task.progressProperty().set(1.0);
+                        task.statusProperty().set(TransferStatus.COMPLETED);
+                        lblBottomStatus.setText("Đã tải về thành công: " + remoteFileName);
 
-                    final String finalPwd = pwd;
-                    final List<RemoteFileItem> finalRemoteList = remoteList;
-
-                    Platform.runLater(() -> {
-                        if (ok) {
-                            task.updateProgress(selected.getSize(), 0);
-                            task.progressProperty().set(1.0);
-                            task.statusProperty().set(TransferStatus.COMPLETED);
-                            lblBottomStatus.setText("Đã tải về thành công: " + remoteFileName);
-
-                            // Lam moi ca thu muc Local va Remote tren giao dien
-                            loadLocalDirectory(currentLocalDir);
-                            if (finalRemoteList != null) {
-                                updateRemoteFilesTable(finalPwd, finalRemoteList);
-                            } else {
-                                refreshRemoteDirectory();
-                            }
-                        } else {
-                            task.statusProperty().set(TransferStatus.FAILED);
-                            lblBottomStatus.setText("Tải về thất bại: " + remoteFileName);
-                        }
-                        progressBarBottom.setVisible(false);
-                    });
-                } catch (Exception e) {
-                    Platform.runLater(() -> {
+                        // Khi tải về hoàn tất -> Refresh lại thư mục máy tính để cập nhật kích thước / tệp mới
+                        loadLocalDirectory(destFolder);
+                    } else {
                         task.statusProperty().set(TransferStatus.FAILED);
-                        lblBottomStatus.setText("Lỗi tải về: " + e.getMessage());
-                        progressBarBottom.setVisible(false);
-                    });
-                }
-            });
-        }
+                        lblBottomStatus.setText("Tải về thất bại: " + remoteFileName);
+                    }
+                    progressBarBottom.setVisible(false);
+                });
+            } catch (Exception e) {
+                Platform.runLater(() -> {
+                    task.statusProperty().set(TransferStatus.FAILED);
+                    lblBottomStatus.setText("Lỗi tải về: " + e.getMessage());
+                    progressBarBottom.setVisible(false);
+                });
+            } finally {
+                isTransferring.set(false);
+            }
+        });
     }
 
     // ================= CLIENT EVENT LISTENER =================
@@ -697,6 +846,7 @@ public class FtpClientController implements FtpClient.ClientEventListener {
     }
 
     public void shutdown() {
+        stopAutoSync();
         if (transferExecutor != null) {
             transferExecutor.shutdownNow();
         }

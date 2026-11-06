@@ -48,6 +48,18 @@
     -fx-background-radius: 12px;
 }
 
+.status-pill-sync {
+    -fx-text-fill: #059669;
+    -fx-font-size: 11px;
+    -fx-font-weight: bold;
+    -fx-background-color: #ECFDF5;
+    -fx-border-color: #A7F3D0;
+    -fx-border-radius: 12px;
+    -fx-background-radius: 12px;
+    -fx-padding: 3px 8px;
+    -fx-alignment: center;
+}
+
 .quickconnect-bar {
     -fx-background-color: #FFFFFF;
     -fx-border-color: #E2E8F0;

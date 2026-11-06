@@ -3,6 +3,7 @@
 <?import javafx.geometry.Insets?>
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
+<?import javafx.scene.shape.SVGPath?>
 
 <VBox prefHeight="780.0" prefWidth="1180.0" spacing="0.0" xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.fiwpr06.ftpapplication.client.controller.FtpClientController">
     <!-- Top Active Connection Bar -->
@@ -20,6 +21,11 @@
         <Button fx:id="btnQuickconnect" onAction="#handleConnect" styleClass="btn-primary" text="Kết nối lại" />
         <Button fx:id="btnDisconnect" onAction="#handleDisconnect" styleClass="btn-danger" text="Ngắt kết nối" />
         <Region HBox.hgrow="ALWAYS" />
+        <Label fx:id="lblAutoSyncStatus" text="Auto-Sync" styleClass="status-pill-sync">
+            <graphic>
+                <SVGPath content="M12 4V1L8 5l4 4V6c3.31 0 6 2.69 6 6 0 1.01-.25 1.97-.7 2.8l1.46 1.46C19.54 15.03 20 13.57 20 12c0-4.42-3.58-8-8-8zm0 14c-3.31 0-6-2.69-6-6 0-1.01.25-1.97.7-2.8L5.24 7.74C4.46 8.97 4 10.43 4 12c0 4.42 3.58 8 8 8v3l4-4-4-4v3z" fill="#059669" />
+            </graphic>
+        </Label>
         <Label fx:id="lblConnectionStatus" text="● Đã kết nối" style="-fx-text-fill: #059669; -fx-font-weight: bold; -fx-background-color: #DCFCE7; -fx-padding: 4px 10px; -fx-background-radius: 12px;" />
     </HBox>
 
@@ -38,10 +44,26 @@
             <HBox alignment="CENTER_LEFT" spacing="6.0" styleClass="explorer-header">
                 <Label styleClass="explorer-title" text="Thư mục máy tính:" />
                 <TextField fx:id="txtLocalPath" editable="false" HBox.hgrow="ALWAYS" styleClass="text-input-field" />
-                <Button onAction="#handleLocalUp" styleClass="btn-secondary" text="Lên ↑" />
-                <Button onAction="#handleLocalRefresh" styleClass="btn-secondary" text="Làm mới" />
-                <Button onAction="#handleLocalNewFolder" styleClass="btn-secondary" text="Tạo thư mục" />
-                <Button onAction="#handleUploadSelected" styleClass="btn-action" text="Tải lên →" />
+                <Button onAction="#handleLocalUp" styleClass="btn-secondary" text="Lên">
+                    <graphic>
+                        <SVGPath content="M4 12l1.41 1.41L11 7.83V20h2V7.83l5.58 5.59L20 12l-8-8-8 8z" fill="#475569" />
+                    </graphic>
+                </Button>
+                <Button onAction="#handleLocalNewFolder" styleClass="btn-secondary" text="Tạo thư mục">
+                    <graphic>
+                        <SVGPath content="M20 6h-8l-2-2H4c-1.11 0-1.99.89-1.99 2L2 18c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V8c0-1.11-.89-2-2-2zm-1 8h-3v3h-2v-3h-3v-2h3V9h2v3h3v2z" fill="#475569" />
+                    </graphic>
+                </Button>
+                <Button onAction="#handlePickAndUpload" styleClass="btn-primary" text="Chọn tệp tải lên">
+                    <graphic>
+                        <SVGPath content="M9 16h6v-6h4l-7-7-7 7h4zm-4 2h14v2H5z" fill="white" />
+                    </graphic>
+                </Button>
+                <Button onAction="#handleUploadSelected" styleClass="btn-action" text="Tải lên tệp đã chọn">
+                    <graphic>
+                        <SVGPath content="M12 4l-1.41 1.41L16.17 11H4v2h12.17l-5.58 5.59L12 20l8-8z" fill="#1D4ED8" />
+                    </graphic>
+                </Button>
             </HBox>
             <TableView fx:id="tblLocalFiles" VBox.vgrow="ALWAYS">
                 <columns>
@@ -64,11 +86,31 @@
             <HBox alignment="CENTER_LEFT" spacing="6.0" styleClass="explorer-header">
                 <Label styleClass="explorer-title" text="Thư mục máy chủ:" />
                 <TextField fx:id="txtRemotePath" editable="false" HBox.hgrow="ALWAYS" text="/" styleClass="text-input-field" />
-                <Button onAction="#handleRemoteUp" styleClass="btn-secondary" text="Lên ↑" />
-                <Button onAction="#handleRemoteRefresh" styleClass="btn-secondary" text="Làm mới" />
-                <Button onAction="#handleRemoteNewFolder" styleClass="btn-secondary" text="Tạo thư mục" />
-                <Button onAction="#handleDownloadSelected" styleClass="btn-action" text="← Tải về" />
-                <Button onAction="#handleRemoteDelete" styleClass="btn-danger" text="Xóa" />
+                <Button onAction="#handleRemoteUp" styleClass="btn-secondary" text="Lên">
+                    <graphic>
+                        <SVGPath content="M4 12l1.41 1.41L11 7.83V20h2V7.83l5.58 5.59L20 12l-8-8-8 8z" fill="#475569" />
+                    </graphic>
+                </Button>
+                <Button onAction="#handleRemoteNewFolder" styleClass="btn-secondary" text="Tạo thư mục">
+                    <graphic>
+                        <SVGPath content="M20 6h-8l-2-2H4c-1.11 0-1.99.89-1.99 2L2 18c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V8c0-1.11-.89-2-2-2zm-1 8h-3v3h-2v-3h-3v-2h3V9h2v3h3v2z" fill="#475569" />
+                    </graphic>
+                </Button>
+                <Button onAction="#handleDownloadSelected" styleClass="btn-action" text="Tải về máy">
+                    <graphic>
+                        <SVGPath content="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z" fill="#1D4ED8" />
+                    </graphic>
+                </Button>
+                <Button onAction="#handleDownloadToFolder" styleClass="btn-secondary" text="Chọn nơi lưu...">
+                    <graphic>
+                        <SVGPath content="M20 6h-8l-2-2H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm0 12H4V8h16v10z" fill="#475569" />
+                    </graphic>
+                </Button>
+                <Button onAction="#handleRemoteDelete" styleClass="btn-danger" text="Xóa">
+                    <graphic>
+                        <SVGPath content="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z" fill="white" />
+                    </graphic>
+                </Button>
             </HBox>
             <TableView fx:id="tblRemoteFiles" VBox.vgrow="ALWAYS">
                 <columns>
