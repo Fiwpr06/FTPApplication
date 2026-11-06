@@ -141,6 +141,10 @@ public class FtpClient {
 
     public synchronized boolean uploadFile(File localFile, String remoteFileName, ProgressCallback callback) throws IOException {
         if (localFile == null || !localFile.exists()) return false;
+
+        sendCommand("TYPE I");
+        readReply();
+
         Socket dataSocket = openPassiveDataSocket();
         if (dataSocket == null) return false;
 
@@ -179,6 +183,9 @@ public class FtpClient {
     }
 
     public synchronized boolean downloadFile(String remoteFileName, File targetLocalFile, ProgressCallback callback) throws IOException {
+        sendCommand("TYPE I");
+        readReply();
+
         Socket dataSocket = openPassiveDataSocket();
         if (dataSocket == null) return false;
 
@@ -251,10 +258,12 @@ public class FtpClient {
         NetworkUtil.PasvHostPort hp = NetworkUtil.parsePasvResponse(pasvReply);
         if (hp == null) return null;
 
-        String host = hp.getHost();
-        if (host.equals("0.0.0.0") || host.equals("127.0.0.1")) {
-            host = controlSocket.getInetAddress().getHostAddress();
-        }
+        // Luon uu tien su dung dia chi host ma Control Socket da ket noi thanh cong toi Server.
+        // Dieu nay tranh truong hop Server nam sau NAT hoac tra ve IP card mang ao (VMware/WSL/VirtualBox),
+        // loopback IP hoac IP link-local (169.254.x.x) khong the dinh tuyen qua lai giua cac may.
+        String host = (controlSocket != null && controlSocket.getInetAddress() != null)
+                ? controlSocket.getInetAddress().getHostAddress()
+                : hp.getHost();
 
         Socket dataSocket = new Socket(host, hp.getPort());
         dataSocket.setSoTimeout(30000);

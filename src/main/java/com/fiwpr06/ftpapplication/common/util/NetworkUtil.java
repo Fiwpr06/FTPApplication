@@ -16,11 +16,31 @@ public final class NetworkUtil {
     private NetworkUtil() {}
 
     /**
-     * Lay dia chi IPv4 that cua may (uu tien dia chi LAN non-loopback)
+     * Lay dia chi IPv4 that cua may (uu tien dia chi LAN non-loopback, bo qua cac card mang ao va link-local 169.254.x.x)
      */
     public static String getLocalIpAddress() {
         try {
+            // Uu tien 1: IPv4 site-local (192.168.x.x, 172.16-31.x.x, 10.x.x.x) tren card mang dang hoat dong
             Enumeration<NetworkInterface> interfaces = NetworkInterface.getNetworkInterfaces();
+            while (interfaces.hasMoreElements()) {
+                NetworkInterface iface = interfaces.nextElement();
+                if (iface.isLoopback() || !iface.isUp() || iface.isVirtual()) continue;
+                String displayName = iface.getDisplayName().toLowerCase();
+                if (displayName.contains("vmware") || displayName.contains("virtual") || displayName.contains("vbox") || displayName.contains("wsl")) {
+                    continue;
+                }
+
+                Enumeration<InetAddress> addresses = iface.getInetAddresses();
+                while (addresses.hasMoreElements()) {
+                    InetAddress addr = addresses.nextElement();
+                    if (addr instanceof Inet4Address && !addr.isLoopbackAddress() && !addr.isLinkLocalAddress() && addr.isSiteLocalAddress()) {
+                        return addr.getHostAddress();
+                    }
+                }
+            }
+
+            // Uu tien 2: Bat ky IPv4 non-loopback, non-link-local tren card mang hop le
+            interfaces = NetworkInterface.getNetworkInterfaces();
             while (interfaces.hasMoreElements()) {
                 NetworkInterface iface = interfaces.nextElement();
                 if (iface.isLoopback() || !iface.isUp()) continue;
@@ -28,7 +48,7 @@ public final class NetworkUtil {
                 Enumeration<InetAddress> addresses = iface.getInetAddresses();
                 while (addresses.hasMoreElements()) {
                     InetAddress addr = addresses.nextElement();
-                    if (addr instanceof Inet4Address && !addr.isLoopbackAddress()) {
+                    if (addr instanceof Inet4Address && !addr.isLoopbackAddress() && !addr.isLinkLocalAddress()) {
                         return addr.getHostAddress();
                     }
                 }

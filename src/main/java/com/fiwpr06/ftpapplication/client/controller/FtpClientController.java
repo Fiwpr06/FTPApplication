@@ -22,9 +22,12 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 public class FtpClientController implements FtpClient.ClientEventListener {
 
@@ -76,6 +79,12 @@ public class FtpClientController implements FtpClient.ClientEventListener {
     private final ObservableList<RemoteFileItem> remoteFilesList = FXCollections.observableArrayList();
     private final ObservableList<TransferTask> queueList = FXCollections.observableArrayList();
 
+    private final ExecutorService transferExecutor = Executors.newSingleThreadExecutor(r -> {
+        Thread t = new Thread(r, "FtpTransferWorker");
+        t.setDaemon(true);
+        return t;
+    });
+
     @FXML
     public void initialize() {
         this.client = new FtpClient();
@@ -90,6 +99,10 @@ public class FtpClientController implements FtpClient.ClientEventListener {
     }
 
     private void setupTables() {
+        // Ho tro chon nhieu tap tin
+        tblLocalFiles.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
+        tblRemoteFiles.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
+
         // Local files table
         colLocalName.setCellValueFactory(new PropertyValueFactory<>("name"));
         colLocalSize.setCellValueFactory(new PropertyValueFactory<>("formattedSize"));
@@ -106,12 +119,54 @@ public class FtpClientController implements FtpClient.ClientEventListener {
 
         // Queue table
         colQFile.setCellValueFactory(new PropertyValueFactory<>("fileName"));
-        colQType.setCellValueFactory(data -> new SimpleStringProperty(data.getValue().getType().name()));
-        colQSize.setCellValueFactory(data -> new SimpleStringProperty(FileUtils.formatSize(data.getValue().getTotalBytes())));
-        colQProgress.setCellValueFactory(data -> data.getValue().progressProperty().asObject());
+        colQType.setCellValueFactory(cellData -> 
+            new SimpleStringProperty(cellData.getValue().getType() == TransferTask.Type.UPLOAD ? "Tải lên ↑" : "Tải về ↓")
+        );
+        colQSize.setCellValueFactory(cellData -> 
+            new SimpleStringProperty(FileUtils.formatSize(cellData.getValue().getTotalBytes()))
+        );
+        colQProgress.setCellValueFactory(cellData -> cellData.getValue().progressProperty().asObject());
         colQProgress.setCellFactory(ProgressBarTableCell.forTableColumn());
-        colQSpeed.setCellValueFactory(new PropertyValueFactory<>("speed"));
-        colQStatus.setCellValueFactory(data -> new SimpleStringProperty(data.getValue().getStatus().name()));
+        colQSpeed.setCellValueFactory(cellData -> cellData.getValue().speedProperty());
+
+        // Dynamic Status Binding: Cap nhat ngay lap tuc theo trang thai thoi gian thuc cua Task
+        colQStatus.setCellValueFactory(cellData -> 
+            javafx.beans.binding.Bindings.createStringBinding(
+                () -> cellData.getValue().getStatus() != null ? cellData.getValue().getStatus().getDescription() : "",
+                cellData.getValue().statusProperty()
+            )
+        );
+        colQStatus.setCellFactory(col -> new TableCell<>() {
+            @Override
+            protected void updateItem(String item, boolean empty) {
+                super.updateItem(item, empty);
+                if (empty || item == null) {
+                    setText(null);
+                    setStyle("");
+                } else {
+                    setText(item);
+                    if (item.contains("Thành công")) {
+                        setStyle("-fx-text-fill: #059669; -fx-font-weight: bold;");
+                    } else if (item.contains("Thất bại")) {
+                        setStyle("-fx-text-fill: #DC2626; -fx-font-weight: bold;");
+                    } else if (item.contains("Đang truyền")) {
+                        setStyle("-fx-text-fill: #2563EB; -fx-font-weight: bold;");
+                    } else {
+                        setStyle("-fx-text-fill: #D97706; -fx-font-weight: bold;");
+                    }
+                }
+            }
+        });
+
+        // Context Menu cho hang doi
+        ContextMenu queueMenu = new ContextMenu();
+        MenuItem clearCompletedItem = new MenuItem("Xóa tác vụ đã hoàn thành");
+        clearCompletedItem.setOnAction(e -> queueList.removeIf(t -> t.getStatus() == TransferStatus.COMPLETED));
+        MenuItem clearAllItem = new MenuItem("Xóa toàn bộ hàng đợi");
+        clearAllItem.setOnAction(e -> queueList.removeIf(t -> t.getStatus() != TransferStatus.TRANSFERRING));
+        queueMenu.getItems().addAll(clearCompletedItem, clearAllItem);
+        tblQueue.setContextMenu(queueMenu);
+
         tblQueue.setItems(queueList);
     }
 
@@ -424,118 +479,138 @@ public class FtpClientController implements FtpClient.ClientEventListener {
     @FXML
     public void handleUploadSelected() {
         if (!client.isConnected()) {
-            AlertHelper.showWarning("Chua ket noi", "Vui long ket noi toi FTP Server truoc khi upload.");
+            AlertHelper.showWarning("Chưa kết nối", "Vui lòng kết nối tới FTP Server trước khi tải lên.");
             return;
         }
 
-        LocalFileItem selected = tblLocalFiles.getSelectionModel().getSelectedItem();
-        if (selected == null || selected.isDirectory()) {
-            AlertHelper.showWarning("Thong bao", "Vui long chon mot tap tin local can upload.");
+        List<LocalFileItem> selectedItems = new ArrayList<>(tblLocalFiles.getSelectionModel().getSelectedItems());
+        if (selectedItems.isEmpty()) {
+            AlertHelper.showWarning("Thông báo", "Vui lòng chọn ít nhất một tập tin cục bộ để tải lên.");
             return;
         }
 
-        File fileToUpload = selected.getFile();
-        String remoteFileName = fileToUpload.getName();
-        TransferTask task = new TransferTask(
-                UUID.randomUUID().toString().substring(0, 8),
-                remoteFileName,
-                fileToUpload.getAbsolutePath(),
-                txtRemotePath.getText() + "/" + remoteFileName,
-                TransferTask.Type.UPLOAD,
-                fileToUpload.length()
-        );
-        queueList.add(task);
+        for (LocalFileItem selected : selectedItems) {
+            if (selected == null || selected.isDirectory()) continue;
 
-        progressBarBottom.setVisible(true);
-        lblBottomStatus.setText("Uploading " + remoteFileName + "...");
+            File fileToUpload = selected.getFile();
+            String remoteFileName = fileToUpload.getName();
+            TransferTask task = new TransferTask(
+                    UUID.randomUUID().toString().substring(0, 8),
+                    remoteFileName,
+                    fileToUpload.getAbsolutePath(),
+                    txtRemotePath.getText() + "/" + remoteFileName,
+                    TransferTask.Type.UPLOAD,
+                    fileToUpload.length()
+            );
+            queueList.add(task);
 
-        new Thread(() -> {
-            task.statusProperty().set(TransferStatus.TRANSFERRING);
-            try {
-                boolean ok = client.uploadFile(fileToUpload, remoteFileName, (transferred, total, speed) -> {
-                    Platform.runLater(() -> {
-                        task.updateProgress(transferred, speed);
-                        progressBarBottom.setProgress(task.getProgress());
+            transferExecutor.submit(() -> {
+                Platform.runLater(() -> {
+                    task.statusProperty().set(TransferStatus.TRANSFERRING);
+                    progressBarBottom.setVisible(true);
+                    progressBarBottom.setProgress(0.0);
+                    lblBottomStatus.setText("Đang tải lên " + remoteFileName + "...");
+                });
+
+                try {
+                    boolean ok = client.uploadFile(fileToUpload, remoteFileName, (transferred, total, speed) -> {
+                        Platform.runLater(() -> {
+                            task.updateProgress(transferred, speed);
+                            progressBarBottom.setProgress(task.getProgress());
+                        });
                     });
-                });
-                Platform.runLater(() -> {
-                    if (ok) {
-                        task.statusProperty().set(TransferStatus.COMPLETED);
-                        lblBottomStatus.setText("Uploaded " + remoteFileName + " successfully.");
-                        refreshRemoteDirectory();
-                    } else {
+
+                    Platform.runLater(() -> {
+                        if (ok) {
+                            task.updateProgress(fileToUpload.length(), 0);
+                            task.progressProperty().set(1.0);
+                            task.statusProperty().set(TransferStatus.COMPLETED);
+                            lblBottomStatus.setText("Đã tải lên thành công: " + remoteFileName);
+                            refreshRemoteDirectory();
+                        } else {
+                            task.statusProperty().set(TransferStatus.FAILED);
+                            lblBottomStatus.setText("Tải lên thất bại: " + remoteFileName);
+                        }
+                        progressBarBottom.setVisible(false);
+                    });
+                } catch (Exception e) {
+                    Platform.runLater(() -> {
                         task.statusProperty().set(TransferStatus.FAILED);
-                        lblBottomStatus.setText("Upload " + remoteFileName + " failed.");
-                    }
-                    progressBarBottom.setVisible(false);
-                });
-            } catch (IOException e) {
-                Platform.runLater(() -> {
-                    task.statusProperty().set(TransferStatus.FAILED);
-                    lblBottomStatus.setText("Upload error: " + e.getMessage());
-                    progressBarBottom.setVisible(false);
-                });
-            }
-        }).start();
+                        lblBottomStatus.setText("Lỗi tải lên: " + e.getMessage());
+                        progressBarBottom.setVisible(false);
+                    });
+                }
+            });
+        }
     }
 
     @FXML
     public void handleDownloadSelected() {
         if (!client.isConnected()) {
-            AlertHelper.showWarning("Chua ket noi", "Vui long ket noi toi FTP Server truoc khi download.");
+            AlertHelper.showWarning("Chưa kết nối", "Vui lòng kết nối tới FTP Server trước khi tải về.");
             return;
         }
 
-        RemoteFileItem selected = tblRemoteFiles.getSelectionModel().getSelectedItem();
-        if (selected == null || selected.isDirectory()) {
-            AlertHelper.showWarning("Thong bao", "Vui long chon mot tap tin tren server can download.");
+        List<RemoteFileItem> selectedItems = new ArrayList<>(tblRemoteFiles.getSelectionModel().getSelectedItems());
+        if (selectedItems.isEmpty()) {
+            AlertHelper.showWarning("Thông báo", "Vui lòng chọn ít nhất một tập tin trên máy chủ để tải về.");
             return;
         }
 
-        String remoteFileName = selected.getName();
-        File targetLocalFile = new File(currentLocalDir, remoteFileName);
+        for (RemoteFileItem selected : selectedItems) {
+            if (selected == null || selected.isDirectory()) continue;
 
-        TransferTask task = new TransferTask(
-                UUID.randomUUID().toString().substring(0, 8),
-                remoteFileName,
-                targetLocalFile.getAbsolutePath(),
-                txtRemotePath.getText() + "/" + remoteFileName,
-                TransferTask.Type.DOWNLOAD,
-                selected.getSize()
-        );
-        queueList.add(task);
+            String remoteFileName = selected.getName();
+            File targetLocalFile = new File(currentLocalDir, remoteFileName);
 
-        progressBarBottom.setVisible(true);
-        lblBottomStatus.setText("Downloading " + remoteFileName + "...");
+            TransferTask task = new TransferTask(
+                    UUID.randomUUID().toString().substring(0, 8),
+                    remoteFileName,
+                    targetLocalFile.getAbsolutePath(),
+                    txtRemotePath.getText() + "/" + remoteFileName,
+                    TransferTask.Type.DOWNLOAD,
+                    selected.getSize()
+            );
+            queueList.add(task);
 
-        new Thread(() -> {
-            task.statusProperty().set(TransferStatus.TRANSFERRING);
-            try {
-                boolean ok = client.downloadFile(remoteFileName, targetLocalFile, (transferred, total, speed) -> {
-                    Platform.runLater(() -> {
-                        task.updateProgress(transferred, speed);
-                        progressBarBottom.setProgress(task.getProgress());
+            transferExecutor.submit(() -> {
+                Platform.runLater(() -> {
+                    task.statusProperty().set(TransferStatus.TRANSFERRING);
+                    progressBarBottom.setVisible(true);
+                    progressBarBottom.setProgress(0.0);
+                    lblBottomStatus.setText("Đang tải về " + remoteFileName + "...");
+                });
+
+                try {
+                    boolean ok = client.downloadFile(remoteFileName, targetLocalFile, (transferred, total, speed) -> {
+                        Platform.runLater(() -> {
+                            task.updateProgress(transferred, speed);
+                            progressBarBottom.setProgress(task.getProgress());
+                        });
                     });
-                });
-                Platform.runLater(() -> {
-                    if (ok) {
-                        task.statusProperty().set(TransferStatus.COMPLETED);
-                        lblBottomStatus.setText("Downloaded " + remoteFileName + " successfully.");
-                        loadLocalDirectory(currentLocalDir);
-                    } else {
+
+                    Platform.runLater(() -> {
+                        if (ok) {
+                            task.updateProgress(selected.getSize(), 0);
+                            task.progressProperty().set(1.0);
+                            task.statusProperty().set(TransferStatus.COMPLETED);
+                            lblBottomStatus.setText("Đã tải về thành công: " + remoteFileName);
+                            loadLocalDirectory(currentLocalDir);
+                        } else {
+                            task.statusProperty().set(TransferStatus.FAILED);
+                            lblBottomStatus.setText("Tải về thất bại: " + remoteFileName);
+                        }
+                        progressBarBottom.setVisible(false);
+                    });
+                } catch (Exception e) {
+                    Platform.runLater(() -> {
                         task.statusProperty().set(TransferStatus.FAILED);
-                        lblBottomStatus.setText("Download " + remoteFileName + " failed.");
-                    }
-                    progressBarBottom.setVisible(false);
-                });
-            } catch (IOException e) {
-                Platform.runLater(() -> {
-                    task.statusProperty().set(TransferStatus.FAILED);
-                    lblBottomStatus.setText("Download error: " + e.getMessage());
-                    progressBarBottom.setVisible(false);
-                });
-            }
-        }).start();
+                        lblBottomStatus.setText("Lỗi tải về: " + e.getMessage());
+                        progressBarBottom.setVisible(false);
+                    });
+                }
+            });
+        }
     }
 
     // ================= CLIENT EVENT LISTENER =================
@@ -563,6 +638,9 @@ public class FtpClientController implements FtpClient.ClientEventListener {
     }
 
     public void shutdown() {
+        if (transferExecutor != null) {
+            transferExecutor.shutdownNow();
+        }
         if (client != null && client.isConnected()) {
             client.disconnect();
         }

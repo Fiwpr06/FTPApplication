@@ -90,4 +90,28 @@ public class FtpClientIntegrationTest {
         tempUpload.delete();
         tempDownload.delete();
     }
+
+    @Test
+    public void testPasscodeAndGuiUploadWorkflow() throws Exception {
+        FtpClient client = new FtpClient();
+        boolean connected = client.connect("127.0.0.1", TEST_PORT);
+        Assertions.assertTrue(connected);
+
+        boolean loggedIn = client.login("Phi", "FTP888");
+        Assertions.assertTrue(loggedIn, "Dang nhap bang passcode phai thanh cong");
+
+        File tempUpload = File.createTempFile("truyện đọc", ".xlsx");
+        Files.writeString(tempUpload.toPath(), "test content");
+
+        boolean uploaded = client.uploadFile(tempUpload, "truyện đọc.xlsx", null);
+        Assertions.assertTrue(uploaded, "Upload file tieng Viet phai thanh cong");
+
+        List<RemoteFileItem> list = client.list();
+        boolean found = list.stream().anyMatch(f -> f.getName().contains("truyện đọc.xlsx"));
+        Assertions.assertTrue(found, "Phai tim thay file tieng Viet tren server");
+
+        client.deleteFile("truyện đọc.xlsx");
+        client.disconnect();
+        tempUpload.delete();
+    }
 }

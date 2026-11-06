@@ -265,7 +265,7 @@ public class FtpSessionHandler implements Runnable {
 
         this.passiveDataChannel = new PassiveDataChannel();
         String serverIp = controlSocket.getLocalAddress().getHostAddress();
-        if (serverIp.equals("0.0.0.0") || serverIp.equals("127.0.0.1")) {
+        if (serverIp == null || serverIp.equals("0.0.0.0")) {
             serverIp = NetworkUtil.getLocalIpAddress();
         }
 
@@ -346,6 +346,10 @@ public class FtpSessionHandler implements Runnable {
             return;
         }
 
+        if (filename.startsWith("\"") && filename.endsWith("\"") && filename.length() >= 2) {
+            filename = filename.substring(1, filename.length() - 1);
+        }
+
         Path filePath = FileUtils.resolveSafePath(rootPath, currentVirtualPath + "/" + filename);
         if (!Files.exists(filePath) || Files.isDirectory(filePath)) {
             sendReply(FtpReplyCode.FILE_NOT_FOUND_OR_NO_ACCESS, "File not found: " + filename);
@@ -362,10 +366,14 @@ public class FtpSessionHandler implements Runnable {
             logDao.log(currentUser.getUsername(), "DOWNLOAD", filename, sent, "SUCCESS");
             sendReply(FtpReplyCode.CLOSING_DATA_CONNECTION, "Transfer complete.");
         } catch (Exception e) {
+            LOGGER.warning("[RETR_ERR] Loi download " + filename + ": " + e.getMessage());
             logDao.log(currentUser.getUsername(), "DOWNLOAD", filename, 0, "FAILED");
-            sendReply(FtpReplyCode.ACTION_ABORTED_LOCAL_ERROR, "Transfer failed.");
+            sendReply(FtpReplyCode.ACTION_ABORTED_LOCAL_ERROR, "Transfer failed: " + e.getMessage());
         } finally {
-            passiveDataChannel = null;
+            if (passiveDataChannel != null) {
+                passiveDataChannel.close();
+                passiveDataChannel = null;
+            }
         }
     }
 
@@ -380,7 +388,15 @@ public class FtpSessionHandler implements Runnable {
             return;
         }
 
+        if (filename.startsWith("\"") && filename.endsWith("\"") && filename.length() >= 2) {
+            filename = filename.substring(1, filename.length() - 1);
+        }
+
         Path filePath = FileUtils.resolveSafePath(rootPath, currentVirtualPath + "/" + filename);
+        if (filePath.getParent() != null) {
+            Files.createDirectories(filePath.getParent());
+        }
+
         sendReply(FtpReplyCode.FILE_STATUS_OK, "Opening data connection for upload " + filename);
 
         try (OutputStream fos = Files.newOutputStream(filePath, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)) {
@@ -388,10 +404,14 @@ public class FtpSessionHandler implements Runnable {
             logDao.log(currentUser.getUsername(), "UPLOAD", filename, received, "SUCCESS");
             sendReply(FtpReplyCode.CLOSING_DATA_CONNECTION, "Transfer complete.");
         } catch (Exception e) {
+            LOGGER.warning("[STOR_ERR] Loi upload " + filename + ": " + e.getMessage());
             logDao.log(currentUser.getUsername(), "UPLOAD", filename, 0, "FAILED");
-            sendReply(FtpReplyCode.ACTION_ABORTED_LOCAL_ERROR, "Upload failed.");
+            sendReply(FtpReplyCode.ACTION_ABORTED_LOCAL_ERROR, "Upload failed: " + e.getMessage());
         } finally {
-            passiveDataChannel = null;
+            if (passiveDataChannel != null) {
+                passiveDataChannel.close();
+                passiveDataChannel = null;
+            }
         }
     }
 
