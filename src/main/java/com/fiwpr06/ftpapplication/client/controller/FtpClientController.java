@@ -15,6 +15,9 @@ import javafx.fxml.FXML;
 import javafx.scene.control.*;
 import javafx.scene.control.cell.ProgressBarTableCell;
 import javafx.scene.control.cell.PropertyValueFactory;
+import javafx.scene.input.ClipboardContent;
+import javafx.scene.input.Dragboard;
+import javafx.scene.input.TransferMode;
 import javafx.stage.DirectoryChooser;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
@@ -36,6 +39,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.stream.Collectors;
 
 public class FtpClientController implements FtpClient.ClientEventListener {
 
@@ -106,6 +110,7 @@ public class FtpClientController implements FtpClient.ClientEventListener {
 
         setupTables();
         setupDoubleClicks();
+        setupDragAndDrop();
 
         // Khoi tao thu muc Local ban dau
         currentLocalDir = new File(System.getProperty("user.dir")).getAbsoluteFile();
@@ -209,6 +214,57 @@ public class FtpClientController implements FtpClient.ClientEventListener {
                     }
                 }
             }
+        });
+    }
+
+    private void setupDragAndDrop() {
+        // Drag tu tblLocalFiles de upload len Remote
+        tblLocalFiles.setOnDragDetected(event -> {
+            List<LocalFileItem> selected = tblLocalFiles.getSelectionModel().getSelectedItems();
+            if (selected == null || selected.isEmpty()) return;
+
+            List<File> files = selected.stream()
+                    .filter(item -> item != null && !item.isDirectory() && item.getFile() != null)
+                    .map(LocalFileItem::getFile)
+                    .collect(Collectors.toList());
+
+            if (!files.isEmpty()) {
+                Dragboard db = tblLocalFiles.startDragAndDrop(TransferMode.COPY);
+                ClipboardContent content = new ClipboardContent();
+                content.putFiles(files);
+                db.setContent(content);
+                event.consume();
+            }
+        });
+
+        // tblRemoteFiles nhan file keo tha tu tblLocalFiles de upload
+        tblRemoteFiles.setOnDragOver(event -> {
+            if (event.getGestureSource() != tblRemoteFiles && event.getDragboard().hasFiles()) {
+                event.acceptTransferModes(TransferMode.COPY);
+            }
+            event.consume();
+        });
+
+        tblRemoteFiles.setOnDragDropped(event -> {
+            Dragboard db = event.getDragboard();
+            boolean success = false;
+            if (db.hasFiles()) {
+                if (!client.isConnected()) {
+                    Platform.runLater(() -> AlertHelper.showWarning("Chưa kết nối", "Vui lòng kết nối tới FTP Server trước khi kéo thả tải lên."));
+                } else {
+                    List<File> files = db.getFiles();
+                    if (files != null && !files.isEmpty()) {
+                        for (File f : files) {
+                            if (f.isFile()) {
+                                enqueueUploadTask(f);
+                            }
+                        }
+                        success = true;
+                    }
+                }
+            }
+            event.setDropCompleted(success);
+            event.consume();
         });
     }
 
