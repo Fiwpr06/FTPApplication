@@ -266,6 +266,64 @@ public class FtpClientController implements FtpClient.ClientEventListener {
             event.setDropCompleted(success);
             event.consume();
         });
+
+        // Drag tu tblRemoteFiles de download ve Local
+        tblRemoteFiles.setOnDragDetected(event -> {
+            List<RemoteFileItem> selected = tblRemoteFiles.getSelectionModel().getSelectedItems();
+            if (selected == null || selected.isEmpty()) return;
+
+            List<RemoteFileItem> files = selected.stream()
+                    .filter(item -> item != null && !item.isDirectory())
+                    .collect(Collectors.toList());
+
+            if (!files.isEmpty()) {
+                Dragboard db = tblRemoteFiles.startDragAndDrop(TransferMode.COPY);
+                ClipboardContent content = new ClipboardContent();
+                String serialized = "FTP_REMOTE:" + files.stream()
+                        .map(RemoteFileItem::getName)
+                        .collect(Collectors.joining(";"));
+                content.putString(serialized);
+                db.setContent(content);
+                event.consume();
+            }
+        });
+
+        // tblLocalFiles nhan tap tin tu tblRemoteFiles de download
+        tblLocalFiles.setOnDragOver(event -> {
+            if (event.getGestureSource() != tblLocalFiles &&
+                    event.getDragboard().hasString() &&
+                    event.getDragboard().getString().startsWith("FTP_REMOTE:")) {
+                event.acceptTransferModes(TransferMode.COPY);
+            }
+            event.consume();
+        });
+
+        tblLocalFiles.setOnDragDropped(event -> {
+            Dragboard db = event.getDragboard();
+            boolean success = false;
+            if (db.hasString() && db.getString().startsWith("FTP_REMOTE:")) {
+                if (!client.isConnected()) {
+                    Platform.runLater(() -> AlertHelper.showWarning("Chưa kết nối", "Vui lòng kết nối tới FTP Server trước khi kéo thả tải về."));
+                } else {
+                    String payload = db.getString().substring("FTP_REMOTE:".length());
+                    String[] fileNames = payload.split(";");
+                    loadLocalDirectory(currentLocalDir);
+
+                    for (String name : fileNames) {
+                        if (name == null || name.trim().isEmpty()) continue;
+                        String cleanName = name.trim();
+                        RemoteFileItem matched = tblRemoteFiles.getItems().stream()
+                                .filter(item -> item != null && item.getName().equals(cleanName))
+                                .findFirst()
+                                .orElse(new RemoteFileItem(cleanName, false, 0L, "-rw-r--r--", ""));
+                        enqueueDownloadTask(matched, currentLocalDir);
+                    }
+                    success = true;
+                }
+            }
+            event.setDropCompleted(success);
+            event.consume();
+        });
     }
 
     // ================= DONG BO TU DONG (AUTO-SYNC ENGINE) =================
