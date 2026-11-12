@@ -173,13 +173,17 @@ public class FtpSessionHandler implements Runnable {
             this.currentVirtualPath = "/";
 
             // Thiet lap thu muc goc
-            if (user.getHomeDir() != null && !user.getHomeDir().isEmpty()) {
+            boolean isAdmin = "admin".equalsIgnoreCase(user.getUsername());
+            if (isAdmin) {
+                this.rootPath = Paths.get("server_storage").toAbsolutePath().normalize();
+            } else if (user.getHomeDir() != null && !user.getHomeDir().isEmpty() && !user.getHomeDir().equals("server_storage/files")) {
                 this.rootPath = Paths.get(user.getHomeDir()).toAbsolutePath().normalize();
             } else {
-                this.rootPath = Paths.get("server_storage/files").toAbsolutePath().normalize();
+                this.rootPath = Paths.get("server_storage/users/" + user.getUsername()).toAbsolutePath().normalize();
             }
             try {
                 Files.createDirectories(this.rootPath);
+                Files.createDirectories(Paths.get("server_storage/public"));
             } catch (Exception ignored) {}
 
             userDao.recordSession(sessionId, pendingUsername, getClientIp(), password);
@@ -201,6 +205,27 @@ public class FtpSessionHandler implements Runnable {
         return true;
     }
 
+    private Path resolveSessionPath(String requestedVirtualPath) {
+        String clean = (requestedVirtualPath == null) ? "" : requestedVirtualPath.replace('\\', '/').trim();
+        while (clean.startsWith("/")) clean = clean.substring(1);
+
+        boolean isAdmin = currentUser != null && "admin".equalsIgnoreCase(currentUser.getUsername());
+        if (isAdmin) {
+            Path serverStorage = Paths.get("server_storage").toAbsolutePath().normalize();
+            return FileUtils.resolveSafePath(serverStorage, clean);
+        }
+
+        // Kiem tra neu user thuong dang thao tac tren thu muc chia se /public
+        if (clean.equals("public") || clean.startsWith("public/")) {
+            Path sharedPublic = Paths.get("server_storage/public").toAbsolutePath().normalize();
+            String sub = clean.equals("public") ? "" : clean.substring("public/".length());
+            return FileUtils.resolveSafePath(sharedPublic, sub);
+        }
+
+        // Mac dinh: Thao tac ben trong thu muc rieng tu (Private) cua user do
+        return FileUtils.resolveSafePath(rootPath, clean);
+    }
+
     private void handlePwd() throws IOException {
         if (!checkAuthenticated()) return;
         sendReply(FtpReplyCode.PATHNAME_CREATED, "\"" + currentVirtualPath + "\" is current directory.");
@@ -220,12 +245,26 @@ public class FtpSessionHandler implements Runnable {
             targetVirtual = (currentVirtualPath.endsWith("/") ? currentVirtualPath : currentVirtualPath + "/") + dir;
         }
 
-        Path resolved = FileUtils.resolveSafePath(rootPath, targetVirtual);
+        Path resolved = resolveSessionPath(targetVirtual);
         if (Files.exists(resolved) && Files.isDirectory(resolved)) {
-            // Cap nhat virtual path
-            Path relative = rootPath.relativize(resolved);
-            String relStr = relative.toString().replace('\\', '/');
-            this.currentVirtualPath = relStr.isEmpty() ? "/" : "/" + relStr;
+            boolean isAdmin = currentUser != null && "admin".equalsIgnoreCase(currentUser.getUsername());
+            String clean = targetVirtual.replace('\\', '/').trim();
+            while (clean.startsWith("/")) clean = clean.substring(1);
+
+            if (clean.isEmpty()) {
+                this.currentVirtualPath = "/";
+            } else if (!isAdmin && (clean.equals("public") || clean.startsWith("public/"))) {
+                this.currentVirtualPath = "/" + clean;
+            } else if (isAdmin) {
+                Path serverStorage = Paths.get("server_storage").toAbsolutePath().normalize();
+                Path relative = serverStorage.relativize(resolved);
+                String relStr = relative.toString().replace('\\', '/');
+                this.currentVirtualPath = relStr.isEmpty() ? "/" : "/" + relStr;
+            } else {
+                Path relative = rootPath.relativize(resolved);
+                String relStr = relative.toString().replace('\\', '/');
+                this.currentVirtualPath = relStr.isEmpty() ? "/" : "/" + relStr;
+            }
             sendReply(FtpReplyCode.FILE_ACTION_OK, "Directory changed to " + currentVirtualPath);
         } else {
             sendReply(FtpReplyCode.FILE_NOT_FOUND_OR_NO_ACCESS, "Directory not found.");
@@ -280,7 +319,7 @@ public class FtpSessionHandler implements Runnable {
             return;
         }
 
-        Path targetDir = FileUtils.resolveSafePath(rootPath, currentVirtualPath);
+        Path targetDir = resolveSessionPath(currentVirtualPath);
         if (!Files.exists(targetDir)) {
             sendReply(FtpReplyCode.FILE_NOT_FOUND_OR_NO_ACCESS, "Directory not found.");
             passiveDataChannel.close();
@@ -291,9 +330,23 @@ public class FtpSessionHandler implements Runnable {
         sendReply(FtpReplyCode.FILE_STATUS_OK, "Opening ASCII mode data connection for file list.");
 
         StringBuilder sb = new StringBuilder();
+        boolean isAdmin = currentUser != null && "admin".equalsIgnoreCase(currentUser.getUsername());
+        if (!isAdmin && currentVirtualPath.equals("/")) {
+            Path sharedPublic = Paths.get("server_storage/public").toAbsolutePath().normalize();
+            if (Files.exists(sharedPublic)) {
+                long lastModified = Files.getLastModifiedTime(sharedPublic).toMillis();
+                String dateStr = DateTimeUtil.formatUnixFtp(lastModified);
+                FileInfo publicInfo = new FileInfo("public", 0, true, lastModified, null);
+                sb.append(publicInfo.toUnixListFormat(dateStr));
+            }
+        }
+
         try (DirectoryStream<Path> stream = Files.newDirectoryStream(targetDir)) {
             for (Path p : stream) {
                 String name = p.getFileName().toString();
+                if (!isAdmin && currentVirtualPath.equals("/") && "public".equalsIgnoreCase(name)) {
+                    continue;
+                }
                 boolean isDir = Files.isDirectory(p);
                 long size = isDir ? 0 : Files.size(p);
                 long lastModified = Files.getLastModifiedTime(p).toMillis();
@@ -318,12 +371,20 @@ public class FtpSessionHandler implements Runnable {
             return;
         }
 
-        Path targetDir = FileUtils.resolveSafePath(rootPath, currentVirtualPath);
+        Path targetDir = resolveSessionPath(currentVirtualPath);
         sendReply(FtpReplyCode.FILE_STATUS_OK, "Opening ASCII mode data connection for name list.");
 
         StringBuilder sb = new StringBuilder();
+        boolean isAdmin = currentUser != null && "admin".equalsIgnoreCase(currentUser.getUsername());
+        if (!isAdmin && currentVirtualPath.equals("/")) {
+            sb.append("public\r\n");
+        }
         try (DirectoryStream<Path> stream = Files.newDirectoryStream(targetDir)) {
             for (Path p : stream) {
+                String name = p.getFileName().toString();
+                if (!isAdmin && currentVirtualPath.equals("/") && "public".equalsIgnoreCase(name)) {
+                    continue;
+                }
                 sb.append(p.getFileName().toString()).append("\r\n");
             }
         }
@@ -350,7 +411,7 @@ public class FtpSessionHandler implements Runnable {
             filename = filename.substring(1, filename.length() - 1);
         }
 
-        Path filePath = FileUtils.resolveSafePath(rootPath, currentVirtualPath + "/" + filename);
+        Path filePath = resolveSessionPath(currentVirtualPath + "/" + filename);
         if (!Files.exists(filePath) || Files.isDirectory(filePath)) {
             sendReply(FtpReplyCode.FILE_NOT_FOUND_OR_NO_ACCESS, "File not found: " + filename);
             passiveDataChannel.close();
@@ -392,7 +453,7 @@ public class FtpSessionHandler implements Runnable {
             filename = filename.substring(1, filename.length() - 1);
         }
 
-        Path filePath = FileUtils.resolveSafePath(rootPath, currentVirtualPath + "/" + filename);
+        Path filePath = resolveSessionPath(currentVirtualPath + "/" + filename);
         if (filePath.getParent() != null) {
             Files.createDirectories(filePath.getParent());
         }
@@ -422,7 +483,7 @@ public class FtpSessionHandler implements Runnable {
             return;
         }
 
-        Path filePath = FileUtils.resolveSafePath(rootPath, currentVirtualPath + "/" + filename);
+        Path filePath = resolveSessionPath(currentVirtualPath + "/" + filename);
         if (Files.exists(filePath) && !Files.isDirectory(filePath)) {
             Files.delete(filePath);
             logDao.log(currentUser.getUsername(), "DELETE", filename, 0, "SUCCESS");
@@ -439,7 +500,7 @@ public class FtpSessionHandler implements Runnable {
             return;
         }
 
-        Path dirPath = FileUtils.resolveSafePath(rootPath, currentVirtualPath + "/" + dirname);
+        Path dirPath = resolveSessionPath(currentVirtualPath + "/" + dirname);
         if (!Files.exists(dirPath)) {
             Files.createDirectories(dirPath);
             sendReply(FtpReplyCode.PATHNAME_CREATED, "\"" + dirname + "\" directory created.");
@@ -455,7 +516,7 @@ public class FtpSessionHandler implements Runnable {
             return;
         }
 
-        Path dirPath = FileUtils.resolveSafePath(rootPath, currentVirtualPath + "/" + dirname);
+        Path dirPath = resolveSessionPath(currentVirtualPath + "/" + dirname);
         if (Files.exists(dirPath) && Files.isDirectory(dirPath)) {
             FileUtils.deleteRecursively(dirPath);
             sendReply(FtpReplyCode.FILE_ACTION_OK, "Directory removed.");
