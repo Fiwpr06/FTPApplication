@@ -28,6 +28,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -288,12 +289,14 @@ public class FtpClientController implements FtpClient.ClientEventListener {
             }
         });
 
-        // tblLocalFiles nhan tap tin tu tblRemoteFiles de download
+        // tblLocalFiles nhan tap tin tu tblRemoteFiles de download HOAC tu Windows Desktop ngoai de sao chep
         tblLocalFiles.setOnDragOver(event -> {
-            if (event.getGestureSource() != tblLocalFiles &&
-                    event.getDragboard().hasString() &&
-                    event.getDragboard().getString().startsWith("FTP_REMOTE:")) {
-                event.acceptTransferModes(TransferMode.COPY);
+            if (event.getGestureSource() != tblLocalFiles) {
+                if (event.getDragboard().hasString() && event.getDragboard().getString().startsWith("FTP_REMOTE:")) {
+                    event.acceptTransferModes(TransferMode.COPY);
+                } else if (event.getDragboard().hasFiles()) {
+                    event.acceptTransferModes(TransferMode.COPY);
+                }
             }
             event.consume();
         });
@@ -319,6 +322,31 @@ public class FtpClientController implements FtpClient.ClientEventListener {
                         enqueueDownloadTask(matched, currentLocalDir);
                     }
                     success = true;
+                }
+            } else if (db.hasFiles()) {
+                // Keo tha file tu Windows Explorer hoac Desktop vao bang may tinh
+                List<File> files = db.getFiles();
+                if (files != null && !files.isEmpty() && currentLocalDir != null && currentLocalDir.exists()) {
+                    int copiedCount = 0;
+                    for (File src : files) {
+                        if (src.isFile()) {
+                            try {
+                                File dest = new File(currentLocalDir, src.getName());
+                                Files.copy(src.toPath(), dest.toPath(), StandardCopyOption.REPLACE_EXISTING);
+                                copiedCount++;
+                                success = true;
+                            } catch (IOException ex) {
+                                LOGGER.log(Level.WARNING, "Loi sao chep file vao thu muc local: " + ex.getMessage());
+                            }
+                        }
+                    }
+                    if (success) {
+                        final int totalCopied = copiedCount;
+                        Platform.runLater(() -> {
+                            loadLocalDirectory(currentLocalDir);
+                            lblBottomStatus.setText("Đã sao chép " + totalCopied + " tệp từ ngoài vào thư mục máy tính.");
+                        });
+                    }
                 }
             }
             event.setDropCompleted(success);
