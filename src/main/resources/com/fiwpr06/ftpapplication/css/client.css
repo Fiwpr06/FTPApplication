@@ -287,3 +287,12 @@
     -fx-text-fill: #64748B;
     -fx-font-size: 12px;
 }
+
+/* ================= DRAG AND DROP HIGHLIGHT ================= */
+
+.table-drag-active {
+    -fx-border-color: #2563EB !important;
+    -fx-border-width: 2px !important;
+    -fx-border-style: dashed !important;
+    -fx-background-color: #EFF6FF !important;
+}

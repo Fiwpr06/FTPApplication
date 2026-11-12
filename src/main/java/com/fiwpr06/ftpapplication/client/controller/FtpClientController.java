@@ -238,7 +238,7 @@ public class FtpClientController implements FtpClient.ClientEventListener {
             }
         });
 
-        // tblRemoteFiles nhan file keo tha tu tblLocalFiles de upload
+        // tblRemoteFiles nhan file keo tha tu tblLocalFiles hoac tu ngoai de upload
         tblRemoteFiles.setOnDragOver(event -> {
             if (event.getGestureSource() != tblRemoteFiles && event.getDragboard().hasFiles()) {
                 event.acceptTransferModes(TransferMode.COPY);
@@ -246,7 +246,20 @@ public class FtpClientController implements FtpClient.ClientEventListener {
             event.consume();
         });
 
+        tblRemoteFiles.setOnDragEntered(event -> {
+            if (event.getGestureSource() != tblRemoteFiles && event.getDragboard().hasFiles()) {
+                if (!tblRemoteFiles.getStyleClass().contains("table-drag-active")) {
+                    tblRemoteFiles.getStyleClass().add("table-drag-active");
+                }
+            }
+        });
+
+        tblRemoteFiles.setOnDragExited(event -> {
+            tblRemoteFiles.getStyleClass().remove("table-drag-active");
+        });
+
         tblRemoteFiles.setOnDragDropped(event -> {
+            tblRemoteFiles.getStyleClass().remove("table-drag-active");
             Dragboard db = event.getDragboard();
             boolean success = false;
             if (db.hasFiles()) {
@@ -301,7 +314,22 @@ public class FtpClientController implements FtpClient.ClientEventListener {
             event.consume();
         });
 
+        tblLocalFiles.setOnDragEntered(event -> {
+            if (event.getGestureSource() != tblLocalFiles) {
+                boolean isValid = (event.getDragboard().hasString() && event.getDragboard().getString().startsWith("FTP_REMOTE:"))
+                        || event.getDragboard().hasFiles();
+                if (isValid && !tblLocalFiles.getStyleClass().contains("table-drag-active")) {
+                    tblLocalFiles.getStyleClass().add("table-drag-active");
+                }
+            }
+        });
+
+        tblLocalFiles.setOnDragExited(event -> {
+            tblLocalFiles.getStyleClass().remove("table-drag-active");
+        });
+
         tblLocalFiles.setOnDragDropped(event -> {
+            tblLocalFiles.getStyleClass().remove("table-drag-active");
             Dragboard db = event.getDragboard();
             boolean success = false;
             if (db.hasString() && db.getString().startsWith("FTP_REMOTE:")) {
