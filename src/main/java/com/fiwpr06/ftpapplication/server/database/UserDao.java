@@ -58,16 +58,26 @@ public class UserDao {
     }
 
     public boolean addUser(User user) {
+        String defaultHome = "server_storage/users/" + user.getUsername();
+        String home = (user.getHomeDir() != null && !user.getHomeDir().trim().isEmpty() && !user.getHomeDir().equals("server_storage/files"))
+                ? user.getHomeDir().trim()
+                : defaultHome;
         String sql = "INSERT INTO users (username, password, home_dir, permission_read, permission_write, is_active) VALUES (?, ?, ?, ?, ?, ?)";
         try (Connection conn = FtpDatabaseManager.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setString(1, user.getUsername());
             ps.setString(2, user.getPassword());
-            ps.setString(3, user.getHomeDir() != null ? user.getHomeDir() : "server_storage/files");
+            ps.setString(3, home);
             ps.setBoolean(4, user.isPermissionRead());
             ps.setBoolean(5, user.isPermissionWrite());
             ps.setBoolean(6, user.isActive());
-            return ps.executeUpdate() > 0;
+            boolean ok = ps.executeUpdate() > 0;
+            if (ok) {
+                try {
+                    java.nio.file.Files.createDirectories(java.nio.file.Paths.get(home));
+                } catch (Exception ignored) {}
+            }
+            return ok;
         } catch (SQLException e) {
             e.printStackTrace();
             return false;
@@ -106,9 +116,21 @@ public class UserDao {
     public synchronized User getOrCreatePasscodeUser(String displayName) {
         User user = getByUsername(displayName);
         if (user == null) {
-            user = new User(0, displayName, "", "server_storage/files", true, true, true);
+            String home = "server_storage/users/" + displayName;
+            user = new User(0, displayName, "", home, true, true, true);
             addUser(user);
             user = getByUsername(displayName);
+        } else {
+            // Neu user cu van con home_dir cu la server_storage/files thi nang cap
+            if ("server_storage/files".equals(user.getHomeDir()) && !"admin".equalsIgnoreCase(user.getUsername())) {
+                user.setHomeDir("server_storage/users/" + displayName);
+                updateUser(user);
+            }
+        }
+        if (user != null) {
+            try {
+                java.nio.file.Files.createDirectories(java.nio.file.Paths.get(user.getHomeDir()));
+            } catch (Exception ignored) {}
         }
         return user;
     }

@@ -84,10 +84,15 @@ public class FtpDatabaseManager {
                         ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;";
                 stmt.executeUpdate(createSessionsTable);
 
-                // 4. Chen tai khoan mac dinh neu chua co
-                String seedUsers = "INSERT IGNORE INTO `users` (`id`, `username`, `password`, `home_dir`, `permission_read`, `permission_write`, `is_active`) VALUES " +
-                        "(1, 'admin', 'admin', 'server_storage/files', 1, 1, 1), " +
-                        "(2, 'user', '123456', 'server_storage/files', 1, 1, 1);";
+                // 4. Chen tai khoan mac dinh neu chua co va khoi tao cau truc thu muc
+                java.nio.file.Files.createDirectories(java.nio.file.Paths.get("server_storage/public"));
+                java.nio.file.Files.createDirectories(java.nio.file.Paths.get("server_storage/users/admin"));
+                java.nio.file.Files.createDirectories(java.nio.file.Paths.get("server_storage/users/user"));
+
+                String seedUsers = "INSERT INTO `users` (`id`, `username`, `password`, `home_dir`, `permission_read`, `permission_write`, `is_active`) VALUES " +
+                        "(1, 'admin', 'admin', 'server_storage', 1, 1, 1), " +
+                        "(2, 'user', '123456', 'server_storage/users/user', 1, 1, 1) " +
+                        "ON DUPLICATE KEY UPDATE home_dir = VALUES(home_dir);";
                 stmt.executeUpdate(seedUsers);
 
                 LOGGER.info("[DB] Khoi tao bang 'users' va 'transfer_logs' thanh cong.");

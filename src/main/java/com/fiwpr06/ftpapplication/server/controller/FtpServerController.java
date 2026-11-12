@@ -227,7 +227,8 @@ public class FtpServerController implements FtpServer.ServerEventListener {
             return;
         }
 
-        User user = new User(0, u, p, h.isEmpty() ? "server_storage/files" : h, chkRead.isSelected(), chkWrite.isSelected(), true);
+        String defaultHome = "server_storage/users/" + u;
+        User user = new User(0, u, p, h.isEmpty() ? defaultHome : h, chkRead.isSelected(), chkWrite.isSelected(), true);
         if (userDao.addUser(user)) {
             txtNewUser.clear();
             txtNewPass.clear();
