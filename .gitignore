@@ -28,3 +28,7 @@ server_storage/files/*
 ~$*
 *.tmp
 
+
+# Test runtime files and downloads
+meo.jpg
+Luu file/
